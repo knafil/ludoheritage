@@ -416,45 +416,49 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-function WorldMap({ games, onOpen }) {
+function WorldMap({ games, onSelectGame, onOpen }) {
   const { t } = useTranslation();
   const [hoveredGame, setHoveredGame] = useState(null);
 
-  // Conversion Coordonnées GPS (Lat, Lng) -> Position en % sur la carte du monde
+  const handleGameClick = (game) => {
+    if (onSelectGame) onSelectGame(game);
+    else if (onOpen) onOpen(game);
+  };
+
+  // Convertit Lat/Lng réels ou région vers la position exacte (%) sur la carte Mercator
   const getCoordinates = (game) => {
     if (game.lat !== undefined && game.lng !== undefined) {
       const x = ((game.lng + 180) * 100) / 360;
+      // Projection Mercator approximée pour centrer correctement les latitudes
       const y = ((90 - game.lat) * 100) / 180;
       return { x, y };
     }
 
-    // Coordonnées de fallback selon les régions
     const regionCoords = {
-      "Europe": { x: 50, y: 32 },
-      "Arab World / Al-Andalus": { x: 53, y: 44 },
-      "North Africa": { x: 48, y: 42 },
+      "Europe": { x: 50, y: 28 },
+      "Arab World / Al-Andalus": { x: 52, y: 38 },
+      "North Africa": { x: 48, y: 40 },
       "Sub-Saharan Africa": { x: 52, y: 58 },
-      "East Asia": { x: 80, y: 42 },
-      "South Asia": { x: 72, y: 48 },
-      "Americas": { x: 25, y: 38 },
-      "Oceania": { x: 88, y: 75 }
+      "East Asia": { x: 80, y: 38 },
+      "South Asia": { x: 70, y: 46 },
+      "Americas": { x: 26, y: 42 },
+      "Oceania": { x: 86, y: 72 }
     };
 
     const base = regionCoords[game.region] || { x: 50, y: 50 };
     const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const offsetX = ((hash % 7) - 3) * 1.2;
-    const offsetY = (((hash >> 2) % 7) - 3) * 1.2;
+    const offsetX = ((hash % 9) - 4) * 1.5;
+    const offsetY = (((hash >> 2) % 9) - 4) * 1.5;
 
     return { x: base.x + offsetX, y: base.y + offsetY };
   };
 
-  // Couleur des anneaux par région
   const getRegionColor = (region) => {
     switch (region) {
       case "Sub-Saharan Africa":
       case "North Africa":
       case "Arab World / Al-Andalus":
-        return "#e69c55"; // Orange
+        return "#e69c55"; // Orange / Ochre
       case "Europe":
         return "#82b366"; // Vert
       case "Americas":
@@ -474,36 +478,28 @@ function WorldMap({ games, onOpen }) {
           position: "relative",
           width: "100%",
           height: "580px",
-          backgroundColor: "#081b29",
+          backgroundColor: "#071624", // Couleur fond océan sombre d'origine
           borderRadius: "8px",
           overflow: "hidden",
           border: "1px solid #1a2b3c",
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
         }}
       >
-        {/* Silhouette de la carte du monde */}
-        <svg
-          viewBox="0 0 1000 500"
+        {/* Vraie silhouette World Map géographique */}
+        <div
           style={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            opacity: 0.35,
+            inset: 0,
+            backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.25,
+            filter: "invert(40%) sepia(50%) saturate(1000%) hue-rotate(180deg)",
             pointerEvents: "none"
           }}
-        >
-          <g fill="#2c4d6f" stroke="#081b29" strokeWidth="0.5">
-            <path d="M150,80 Q200,60 280,90 T300,180 L230,220 L270,320 L220,420 L180,350 L190,260 L120,180 Z" />
-            <path d="M460,70 Q520,60 580,90 L560,160 L480,170 L450,120 Z" />
-            <path d="M460,180 L580,180 L600,260 L540,400 L470,320 L450,220 Z" />
-            <path d="M580,80 Q750,40 900,100 L880,240 L760,280 L660,220 L580,170 Z" />
-            <path d="M800,320 Q880,310 900,360 L850,420 L780,380 Z" />
-          </g>
-        </svg>
+        />
 
-        {/* Marqueurs des jeux */}
+        {/* Repères des jeux sur le monde */}
         {(games || []).map((game) => {
           const { x, y } = getCoordinates(game);
           const color = getRegionColor(game.region);
@@ -512,7 +508,10 @@ function WorldMap({ games, onOpen }) {
           return (
             <div
               key={game.id || game.name}
-              onClick={() => onOpen && onOpen(game)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGameClick(game);
+              }}
               onMouseEnter={() => setHoveredGame(game)}
               onMouseLeave={() => setHoveredGame(null)}
               style={{
@@ -521,22 +520,24 @@ function WorldMap({ games, onOpen }) {
                 top: `${y}%`,
                 transform: "translate(-50%, -50%)",
                 cursor: "pointer",
-                zIndex: isHovered ? 100 : 10
+                padding: "8px",
+                zIndex: isHovered ? 100 : 20
               }}
             >
+              {/* Cercle réactif */}
               <div
                 style={{
                   width: "18px",
                   height: "18px",
                   borderRadius: "50%",
                   border: `2px solid ${color}`,
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  backgroundColor: "rgba(255, 255, 255, 0.25)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  transition: "transform 0.2s ease",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
                   transform: isHovered ? "scale(1.4)" : "scale(1)",
-                  boxShadow: isHovered ? `0 0 12px ${color}` : "none"
+                  boxShadow: isHovered ? `0 0 14px ${color}` : "none"
                 }}
               >
                 <div
@@ -549,19 +550,19 @@ function WorldMap({ games, onOpen }) {
                 />
               </div>
 
-              {/* Bulle d'information au survol */}
+              {/* Tooltip au survol */}
               {isHovered && (
                 <div
                   style={{
                     position: "absolute",
-                    bottom: "28px",
+                    bottom: "32px",
                     left: "50%",
                     transform: "translateX(-50%)",
                     backgroundColor: "#ffffff",
                     borderRadius: "6px",
                     padding: "12px 16px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-                    width: "210px",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
+                    width: "220px",
                     pointerEvents: "none",
                     zIndex: 200,
                     textAlign: "left"
@@ -615,10 +616,6 @@ function WorldMap({ games, onOpen }) {
     </section>
   );
 }
-
-
-
-
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
