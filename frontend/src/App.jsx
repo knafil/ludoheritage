@@ -737,6 +737,7 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
+// ─── Main App Shell ──────────────────────────────────────────────────────────
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -757,7 +758,7 @@ export default function App() {
 
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Language switch
+  // Chancer la langue
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
   };
@@ -833,50 +834,51 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <header className="topbar">
         <div className="brand">
-          <span className="logo-box">LH</span>
+          <span className="brand-mark">LH</span>
           <div>
-            <h1>LudoHeritage</h1>
-            <p>Digital Ludeme Project</p>
+            <strong>LudoHeritage</strong>
+            <small>Digital Ludeme Project</small>
           </div>
         </div>
-        <nav className="nav-links">
+        <nav className="topbar-nav">
           {["Catalogue", "Carte", "Chronologie", "Ludemes", "Comparer", "Quiz", "Communaute", "Profil"].map(n => (
             <button key={n} className={tab === n ? "active" : ""} onClick={() => setTab(n)}>
               {t(n.toLowerCase(), n)}
             </button>
           ))}
         </nav>
-        <div className="header-actions">
-          {/* SÉLECTEUR DE LANGUE */}
-          <div className="lang-picker">
-            <button className={i18n.language === 'en' ? 'active' : ''} onClick={() => changeLanguage('en')}>EN</button>
-            <button className={i18n.language === 'fr' ? 'active' : ''} onClick={() => changeLanguage('fr')}>FR</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Sélecteur de langue */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button className="secondary compact" style={{ fontWeight: i18n.language === 'en' ? '800' : '400' }} onClick={() => changeLanguage('en')}>EN</button>
+            <button className="secondary compact" style={{ fontWeight: i18n.language === 'fr' ? '800' : '400' }} onClick={() => changeLanguage('fr')}>FR</button>
           </div>
-          <button className="secondary logout-btn" onClick={logout}>{t('logout', 'Déconnexion')}</button>
+          <button className="secondary compact" onClick={logout}>{t('logout', 'Déconnexion')}</button>
         </div>
       </header>
 
-      <main className="app-main">
+      <main className="workspace">
         {tab === "Catalogue" && (
           <section>
-            <div className="hero-banner">
+            <div className="hero-band">
               <div>
                 <p className="eyebrow">{t('gameOfDay', 'JEU DU JOUR')}</p>
-                <h2>Fanorona</h2>
+                <h1>Fanorona</h1>
                 <p>{t('fanoronaDesc', 'Jeu national de Madagascar avec un système de capture unique : par approche ou par retrait.')}</p>
+                <br />
                 <button className="primary" onClick={() => setSelectedGame(games.find(g => g.name === "Fanorona") || games[0])}>{t('discover', 'Découvrir ce jeu')}</button>
               </div>
-              <div className="stats-grid">
-                <div><h3>{games.length}</h3><p>{t('games', 'jeux')}</p></div>
-                <div><h3>4</h3><p>{t('regions', 'régions')}</p></div>
-                <div><h3>20</h3><p>{t('categories', 'catégories')}</p></div>
-                <div><h3>{favs.length}</h3><p>{t('favorites', 'favoris')}</p></div>
+              <div className="hero-stats">
+                <span><strong>{games.length}</strong><small>{t('games', 'jeux')}</small></span>
+                <span><strong>4</strong><small>{t('regions', 'régions')}</small></span>
+                <span><strong>20</strong><small>{t('categories', 'catégories')}</small></span>
+                <span><strong>{favs.length}</strong><small>{t('favorites', 'favoris')}</small></span>
               </div>
             </div>
 
-            <div className="catalog-grid">
+            <div className="game-grid">
               {games.map(g => (
                 <GameCard key={g.id} game={g} onOpen={setSelectedGame} isFav={favs.includes(g.id)} onToggleFav={toggleFav} />
               ))}
