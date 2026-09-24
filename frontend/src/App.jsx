@@ -416,15 +416,24 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-
 function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
-  // Coordonnées approximatives des continents pour placer les points de jeux
   const regions = [
-    { name: "Africa", path: "M 390 280 C 370 200, 480 200, 480 280 C 510 380, 390 420, 390 280 Z", color: "#8c5a32" },
-    { name: "America", path: "M 180 120 C 130 110, 310 110, 300 240 C 290 320, 150 280, 180 120 Z", color: "#4c3f77" },
-    { name: "Europe", path: "M 400 110 C 390 80, 510 80, 500 150 C 490 200, 390 180, 400 110 Z", color: "#2d5d4f" },
-    { name: "Asia", path: "M 510 100 C 500 40, 750 40, 780 170 C 800 280, 500 300, 510 100 Z", color: "#1e4d79" }
+    { name: "Africa", label: "Afrique", path: "M 390 280 C 370 200, 480 200, 480 280 C 510 380, 390 420, 390 280 Z", color: "#8c5a32" },
+    { name: "America", label: "Amérique", path: "M 180 120 C 130 110, 310 110, 300 240 C 290 320, 150 280, 180 120 Z", color: "#4c3f77" },
+    { name: "Europe", label: "Europe", path: "M 400 110 C 390 80, 510 80, 500 150 C 490 200, 390 180, 400 110 Z", color: "#2d5d4f" },
+    { name: "Asia", label: "Asie", path: "M 510 100 C 500 40, 750 40, 780 170 C 800 280, 500 300, 510 100 Z", color: "#1e4d79" }
   ];
+
+  // Helper pour associer n'importe quelle variante de nom de région (FR/EN)
+  const getRegionKey = (regionName) => {
+    if (!regionName) return "Europe";
+    const r = regionName.toLowerCase();
+    if (r.includes("afri")) return "Africa";
+    if (r.includes("americ") || r.includes("amér")) return "America";
+    if (r.includes("eur")) return "Europe";
+    if (r.includes("as") || r.includes("orie")) return "Asia";
+    return "Europe";
+  };
 
   return (
     <div className="map-container" style={{ position: "relative", background: "#0b253a", borderRadius: "12px", padding: "20px" }}>
@@ -441,7 +450,7 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
               <path
                 d={reg.path}
                 fill={reg.color}
-                opacity={selectedRegion && !isSelected ? 0.3 : 0.85}
+                opacity={selectedRegion && !isSelected ? 0.25 : 0.85}
                 stroke={isSelected ? "#ffffff" : "none"}
                 strokeWidth={isSelected ? 3 : 0}
               />
@@ -460,9 +469,8 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
           );
         })}
 
-        {/* Points blancs pour chaque jeu */}
+        {/* Points des jeux filtrés ou non */}
         {games.map((game, idx) => {
-          // Disposition des points en cercle autour de chaque continent
           const regionCoords = {
             Africa: { cx: 430, cy: 310 },
             America: { cx: 230, cy: 230 },
@@ -470,9 +478,12 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
             Asia: { cx: 640, cy: 200 }
           };
 
-          const base = regionCoords[game.region] || { cx: 450, cy: 250 };
-          const angle = (idx * 35) * (Math.PI / 180);
-          const radius = 35;
+          const matchedKey = getRegionKey(game.region);
+          const base = regionCoords[matchedKey];
+          
+          // Répartition harmonieuse autour du centre du continent
+          const angle = (idx * 45) * (Math.PI / 180);
+          const radius = 30;
           const cx = base.cx + radius * Math.cos(angle);
           const cy = base.cy + radius * Math.sin(angle);
 
@@ -485,9 +496,9 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
               fill="#ffffff"
               stroke="#0b253a"
               strokeWidth={2}
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", transition: "all 0.3s ease" }}
               onClick={(e) => {
-                e.stopPropagation(); // Évite de déclencher le clic du continent
+                e.stopPropagation();
                 onOpen(game);
               }}
             >
@@ -497,7 +508,7 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
         })}
       </svg>
       <div style={{ textAlign: "center", color: "#8a99a8", marginTop: "10px", fontSize: "14px" }}>
-        Cliquez sur un continent pour filtrer · Cliquez sur un point blanc pour voir le jeu
+        {selectedRegion ? `Filtré sur : ${selectedRegion} (cliquez à nouveau pour réinitialiser)` : "Cliquez sur un continent pour filtrer · Cliquez sur un point blanc pour voir le jeu"}
       </div>
     </div>
   );
@@ -919,15 +930,22 @@ export default function App() {
             </div>
           </section>
         )}
-
         {tab === "Carte" && (
   <WorldMap 
-    games={selectedRegion ? games.filter(g => g.region === selectedRegion) : games} 
+    games={selectedRegion ? games.filter(g => {
+      const r = (g.region || "").toLowerCase();
+      if (selectedRegion === "Africa") return r.includes("afri");
+      if (selectedRegion === "America") return r.includes("americ") || r.includes("amér");
+      if (selectedRegion === "Europe") return r.includes("eur");
+      if (selectedRegion === "Asia") return r.includes("as") || r.includes("orie");
+      return true;
+    }) : games} 
     onOpen={setSelectedGame} 
     selectedRegion={selectedRegion}
     onFilterRegion={(region) => setSelectedRegion(selectedRegion === region ? null : region)} 
   />
 )}
+        
         {tab === "Chronologie" && <Timeline games={games} onOpen={setSelectedGame} />}
         {tab === "Comparer" && <ComparePage games={games} onOpen={setSelectedGame} />}
         {tab === "Quiz" && <QuizPage user={user} games={games} leaderboard={leaderboard} onScoreSubmit={(sc, tot) => setLeaderboard([...leaderboard, { id: Date.now(), displayName: user.displayName, score: sc, total: tot }])} />}
