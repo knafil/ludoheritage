@@ -435,6 +435,13 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
     return "Europe";
   };
 
+  const regionCoords = {
+    Africa: { cx: 430, cy: 310 },
+    America: { cx: 230, cy: 230 },
+    Europe: { cx: 445, cy: 140 },
+    Asia: { cx: 640, cy: 200 }
+  };
+
   return (
     <div className="map-container" style={{ position: "relative", background: "#0b253a", borderRadius: "12px", padding: "20px" }}>
       <svg viewBox="0 0 900 500" style={{ width: "100%", height: "auto" }}>
@@ -469,42 +476,37 @@ function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
           );
         })}
 
-        {/* Points des jeux filtrés ou non */}
-        {games.map((game, idx) => {
-          const regionCoords = {
-            Africa: { cx: 430, cy: 310 },
-            America: { cx: 230, cy: 230 },
-            Europe: { cx: 445, cy: 140 },
-            Asia: { cx: 640, cy: 200 }
-          };
+        {/* Points des jeux calculés dynamiquement sans chevauchement */}
+        {regions.map((reg) => {
+          const regionGames = games.filter(g => getRegionKey(g.region) === reg.name);
+          const base = regionCoords[reg.name];
+          const count = regionGames.length;
 
-          const matchedKey = getRegionKey(game.region);
-          const base = regionCoords[matchedKey];
-          
-          // Répartition harmonieuse autour du centre du continent
-          const angle = (idx * 45) * (Math.PI / 180);
-          const radius = 30;
-          const cx = base.cx + radius * Math.cos(angle);
-          const cy = base.cy + radius * Math.sin(angle);
+          return regionGames.map((game, idx) => {
+            const angle = (idx * (360 / Math.max(count, 1))) * (Math.PI / 180);
+            const radius = count > 6 ? 42 : 30;
+            const cx = base.cx + radius * Math.cos(angle);
+            const cy = base.cy + radius * Math.sin(angle);
 
-          return (
-            <circle
-              key={game.id || idx}
-              cx={cx}
-              cy={cy}
-              r={7}
-              fill="#ffffff"
-              stroke="#0b253a"
-              strokeWidth={2}
-              style={{ cursor: "pointer", transition: "all 0.3s ease" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpen(game);
-              }}
-            >
-              <title>{game.name}</title>
-            </circle>
-          );
+            return (
+              <circle
+                key={game.id || `${reg.name}-${idx}`}
+                cx={cx}
+                cy={cy}
+                r={6}
+                fill="#ffffff"
+                stroke="#0b253a"
+                strokeWidth={2}
+                style={{ cursor: "pointer", transition: "all 0.3s ease" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpen(game);
+                }}
+              >
+                <title>{game.name}</title>
+              </circle>
+            );
+          });
         })}
       </svg>
       <div style={{ textAlign: "center", color: "#8a99a8", marginTop: "10px", fontSize: "14px" }}>
