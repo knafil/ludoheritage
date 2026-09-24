@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-
+import './styles.css';
 const rawApiBase = import.meta.env.VITE_API_URL || "http://localhost:8080";
 // Supprime le slash final s'il existe
 const API_BASE = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
