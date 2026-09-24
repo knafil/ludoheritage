@@ -416,105 +416,210 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-function WorldMap({ games, onOpen, selectedRegion, onFilterRegion }) {
-  const regions = [
-    { name: "Africa", label: "Afrique", path: "M 390 280 C 370 200, 480 200, 480 280 C 510 380, 390 420, 390 280 Z", color: "#8c5a32" },
-    { name: "America", label: "Amérique", path: "M 180 120 C 130 110, 310 110, 300 240 C 290 320, 150 280, 180 120 Z", color: "#4c3f77" },
-    { name: "Europe", label: "Europe", path: "M 400 110 C 390 80, 510 80, 500 150 C 490 200, 390 180, 400 110 Z", color: "#2d5d4f" },
-    { name: "Asia", label: "Asie", path: "M 510 100 C 500 40, 750 40, 780 170 C 800 280, 500 300, 510 100 Z", color: "#1e4d79" }
-  ];
+function WorldMap({ games, onOpen }) {
+  const { t } = useTranslation();
+  const [hoveredGame, setHoveredGame] = useState(null);
 
-  // Helper pour associer n'importe quelle variante de nom de région (FR/EN)
-  const getRegionKey = (regionName) => {
-    if (!regionName) return "Europe";
-    const r = regionName.toLowerCase();
-    if (r.includes("afri")) return "Africa";
-    if (r.includes("americ") || r.includes("amér")) return "America";
-    if (r.includes("eur")) return "Europe";
-    if (r.includes("as") || r.includes("orie")) return "Asia";
-    return "Europe";
+  // Conversion Coordonnées GPS (Lat, Lng) -> Position en % sur la carte du monde
+  const getCoordinates = (game) => {
+    if (game.lat !== undefined && game.lng !== undefined) {
+      const x = ((game.lng + 180) * 100) / 360;
+      const y = ((90 - game.lat) * 100) / 180;
+      return { x, y };
+    }
+
+    // Coordonnées de fallback selon les régions
+    const regionCoords = {
+      "Europe": { x: 50, y: 32 },
+      "Arab World / Al-Andalus": { x: 53, y: 44 },
+      "North Africa": { x: 48, y: 42 },
+      "Sub-Saharan Africa": { x: 52, y: 58 },
+      "East Asia": { x: 80, y: 42 },
+      "South Asia": { x: 72, y: 48 },
+      "Americas": { x: 25, y: 38 },
+      "Oceania": { x: 88, y: 75 }
+    };
+
+    const base = regionCoords[game.region] || { x: 50, y: 50 };
+    const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const offsetX = ((hash % 7) - 3) * 1.2;
+    const offsetY = (((hash >> 2) % 7) - 3) * 1.2;
+
+    return { x: base.x + offsetX, y: base.y + offsetY };
   };
 
-  const regionCoords = {
-    Africa: { cx: 430, cy: 310 },
-    America: { cx: 230, cy: 230 },
-    Europe: { cx: 445, cy: 140 },
-    Asia: { cx: 640, cy: 200 }
+  // Couleur des anneaux par région
+  const getRegionColor = (region) => {
+    switch (region) {
+      case "Sub-Saharan Africa":
+      case "North Africa":
+      case "Arab World / Al-Andalus":
+        return "#e69c55"; // Orange
+      case "Europe":
+        return "#82b366"; // Vert
+      case "Americas":
+        return "#9673a6"; // Violet
+      case "East Asia":
+      case "South Asia":
+      case "Oceania":
+      default:
+        return "#6c8ebf"; // Bleu
+    }
   };
 
   return (
-    <div className="map-container" style={{ position: "relative", background: "#0b253a", borderRadius: "12px", padding: "20px" }}>
-      <svg viewBox="0 0 900 500" style={{ width: "100%", height: "auto" }}>
-        {/* Formes des continents */}
-        {regions.map((reg) => {
-          const isSelected = selectedRegion === reg.name;
+    <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto" }}>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "580px",
+          backgroundColor: "#081b29",
+          borderRadius: "8px",
+          overflow: "hidden",
+          border: "1px solid #1a2b3c",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
+        }}
+      >
+        {/* Silhouette de la carte du monde */}
+        <svg
+          viewBox="0 0 1000 500"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            opacity: 0.35,
+            pointerEvents: "none"
+          }}
+        >
+          <g fill="#2c4d6f" stroke="#081b29" strokeWidth="0.5">
+            <path d="M150,80 Q200,60 280,90 T300,180 L230,220 L270,320 L220,420 L180,350 L190,260 L120,180 Z" />
+            <path d="M460,70 Q520,60 580,90 L560,160 L480,170 L450,120 Z" />
+            <path d="M460,180 L580,180 L600,260 L540,400 L470,320 L450,220 Z" />
+            <path d="M580,80 Q750,40 900,100 L880,240 L760,280 L660,220 L580,170 Z" />
+            <path d="M800,320 Q880,310 900,360 L850,420 L780,380 Z" />
+          </g>
+        </svg>
+
+        {/* Marqueurs des jeux */}
+        {(games || []).map((game) => {
+          const { x, y } = getCoordinates(game);
+          const color = getRegionColor(game.region);
+          const isHovered = hoveredGame?.name === game.name;
+
           return (
-            <g 
-              key={reg.name} 
-              onClick={() => onFilterRegion && onFilterRegion(reg.name)}
-              style={{ cursor: "pointer", transition: "all 0.3s ease" }}
+            <div
+              key={game.id || game.name}
+              onClick={() => onOpen && onOpen(game)}
+              onMouseEnter={() => setHoveredGame(game)}
+              onMouseLeave={() => setHoveredGame(null)}
+              style={{
+                position: "absolute",
+                left: `${x}%`,
+                top: `${y}%`,
+                transform: "translate(-50%, -50%)",
+                cursor: "pointer",
+                zIndex: isHovered ? 100 : 10
+              }}
             >
-              <path
-                d={reg.path}
-                fill={reg.color}
-                opacity={selectedRegion && !isSelected ? 0.25 : 0.85}
-                stroke={isSelected ? "#ffffff" : "none"}
-                strokeWidth={isSelected ? 3 : 0}
-              />
-              <text
-                x={reg.name === "Africa" ? 430 : reg.name === "America" ? 230 : reg.name === "Europe" ? 445 : 640}
-                y={reg.name === "Africa" ? 310 : reg.name === "America" ? 230 : reg.name === "Europe" ? 140 : 200}
-                fill="#ffffff"
-                fontWeight="bold"
-                fontSize="16"
-                textAnchor="middle"
-                style={{ pointerEvents: "none" }}
-              >
-                {reg.name}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Points des jeux calculés dynamiquement sans chevauchement */}
-        {regions.map((reg) => {
-          const regionGames = games.filter(g => getRegionKey(g.region) === reg.name);
-          const base = regionCoords[reg.name];
-          const count = regionGames.length;
-
-          return regionGames.map((game, idx) => {
-            const angle = (idx * (360 / Math.max(count, 1))) * (Math.PI / 180);
-            const radius = count > 6 ? 42 : 30;
-            const cx = base.cx + radius * Math.cos(angle);
-            const cy = base.cy + radius * Math.sin(angle);
-
-            return (
-              <circle
-                key={game.id || `${reg.name}-${idx}`}
-                cx={cx}
-                cy={cy}
-                r={6}
-                fill="#ffffff"
-                stroke="#0b253a"
-                strokeWidth={2}
-                style={{ cursor: "pointer", transition: "all 0.3s ease" }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpen(game);
+              <div
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  border: `2px solid ${color}`,
+                  backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "transform 0.2s ease",
+                  transform: isHovered ? "scale(1.4)" : "scale(1)",
+                  boxShadow: isHovered ? `0 0 12px ${color}` : "none"
                 }}
               >
-                <title>{game.name}</title>
-              </circle>
-            );
-          });
+                <div
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ffffff"
+                  }}
+                />
+              </div>
+
+              {/* Bulle d'information au survol */}
+              {isHovered && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "28px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    backgroundColor: "#ffffff",
+                    borderRadius: "6px",
+                    padding: "12px 16px",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+                    width: "210px",
+                    pointerEvents: "none",
+                    zIndex: 200,
+                    textAlign: "left"
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 2px 0", color: "#1a2b3c", fontSize: "15px", fontWeight: "bold" }}>
+                    {game.name}
+                  </h4>
+                  <p style={{ margin: "0 0 8px 0", color: "#7a8a99", fontSize: "11px" }}>
+                    {game.region || "Traditionnel"}
+                  </p>
+
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    <span
+                      style={{
+                        backgroundColor: "#f0f4f8",
+                        color: "#4a5a6a",
+                        fontSize: "10px",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontWeight: "600"
+                      }}
+                    >
+                      {game.category || "Strategy"}
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor: "#e6f2ed",
+                        color: "#2e7d5b",
+                        fontSize: "10px",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontWeight: "600"
+                      }}
+                    >
+                      {game.difficulty || "Beginner"}
+                    </span>
+                  </div>
+
+                  {game.period && (
+                    <div style={{ marginTop: "6px", fontSize: "10px", color: "#9a8a78", fontStyle: "italic" }}>
+                      ~{game.period}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
         })}
-      </svg>
-      <div style={{ textAlign: "center", color: "#8a99a8", marginTop: "10px", fontSize: "14px" }}>
-        {selectedRegion ? `Filtré sur : ${selectedRegion} (cliquez à nouveau pour réinitialiser)` : "Cliquez sur un continent pour filtrer · Cliquez sur un point blanc pour voir le jeu"}
       </div>
-    </div>
+    </section>
   );
 }
+
+
+
+
+
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
@@ -773,17 +878,270 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
-
 function LudemesPage({ games, onOpen }) {
-  const allLudemes = Array.from(new Set(games.flatMap(g => g.ludemes || g.mechanics || ["Placement", "Capture", "Course", "Dés"])));
+  const { t } = useTranslation();
+
+  // Extraction de tous les ludèmes/mécaniques uniques
+  const ludemesList = Array.from(
+    new Set(
+      games.flatMap((g) => g.ludemes || g.mechanics || g.categories || [])
+    )
+  ).sort();
+
   return (
     <section style={{ padding: "20px 0" }}>
-      <h2>Bibliothèque des Ludèmes</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px", marginTop: "16px" }}>
-        {allLudemes.map((ludeme, idx) => (
-          <div key={idx} className="card" style={{ padding: "16px" }}>
-            <h3 style={{ marginTop: 0, color: "#4ba3e3" }}>{ludeme}</h3>
-            <p style={{ fontSize: "14px" }}>Mécanique de jeu</p>
+      <h1 style={{ marginBottom: "24px" }}>
+        {t("ludemesTitle", "Bibliothèque des Ludèmes")}
+      </h1>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gap: "16px"
+        }}
+      >
+        {ludemesList.map((ludeme) => {
+          // Filtrer les jeux possédant ce ludème
+          const matchingGames = games.filter((g) =>
+            (g.ludemes || g.mechanics || g.categories || []).includes(ludeme)
+          );
+
+          return (
+            <div
+              key={ludeme}
+              className="card"
+              style={{
+                background: "#ffffff",
+                borderRadius: "8px",
+                padding: "20px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: "160px",
+                border: "1px solid #eef2f5"
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: "0 0 6px 0",
+                    color: "#1a2b3c",
+                    fontSize: "18px",
+                    fontWeight: "700"
+                  }}
+                >
+                  {ludeme}
+                </h3>
+                <span
+                  style={{
+                    fontSize: "13px",
+                    color: "#7a8a99",
+                    display: "block",
+                    marginBottom: "16px"
+                  }}
+                >
+                  {matchingGames.length}{" "}
+                  {matchingGames.length > 1
+                    ? t("gamesPlural", "games")
+                    : t("gameSingular", "game")}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#8a99a8",
+                  lineHeight: "1.4",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical"
+                }}
+              >
+                {matchingGames.map((g) => g.name).join(", ")}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CommunityPage({ user, games }) {
+  const { t } = useTranslation();
+  const [selectedGame, setSelectedGame] = useState("");
+  const [postText, setPostText] = useState("");
+  const [commentInputs, setCommentInputs] = useState({});
+
+  const [posts, setPosts] = useState([
+    {
+      id: 1,
+      author: "Mehdi Lahlou",
+      avatar: "ML",
+      timeAgo: "409d",
+      linkedGame: "Jeu Royal d'Ur",
+      content: "Irving Finkel du British Museum a joué au Jeu Royal d'Ur EN DIRECT sur YouTube contre un gamer moderne, avec un plateau vieux de 4000 ans — et il a GAGNÉ. Une vidéo incontournable.",
+      likes: 7,
+      comments: [
+        { author: "Youssef Idrissi", text: "He translated the rules from a 177 BC clay tablet and then beat a modern gamer. Absolutely incredible." },
+        { author: "Omar Chakroun", text: "Sans ce scribe babylonien qui a eu l'idée d'écrire les règles, ce jeu serait perdu à jamais." },
+        { author: "Amina Benali", text: "LudoHeritage existe justement pour qu'aucun jeu ne disparaisse. Belle mission !" }
+      ]
+    },
+    {
+      id: 2,
+      author: "Fatima Zahra Alaoui",
+      avatar: "FZ",
+      timeAgo: "410d",
+      linkedGame: "Bagh Chal",
+      content: "Quelqu'un a déjà tenté une variante de Bagh Chal à 5 tigres au lieu de 4 ? Est-ce que cela rééquilibre le jeu pour les chèvres ?",
+      likes: 3,
+      comments: []
+    }
+  ]);
+
+  const handlePublish = () => {
+    if (!postText.trim()) return;
+    const newEntry = {
+      id: Date.now(),
+      author: user?.displayName || "Utilisateur",
+      avatar: (user?.displayName || "U").slice(0, 2).toUpperCase(),
+      timeAgo: "À l'instant",
+      linkedGame: selectedGame,
+      content: postText,
+      likes: 0,
+      comments: []
+    };
+    setPosts([newEntry, ...posts]);
+    setPostText("");
+    setSelectedGame("");
+  };
+
+  const handleAddComment = (postId) => {
+    const text = commentInputs[postId];
+    if (!text || !text.trim()) return;
+
+    setPosts(posts.map(p => {
+      if (p.id === postId) {
+        return {
+          ...p,
+          comments: [...p.comments, { author: user?.displayName || "Utilisateur", text }]
+        };
+      }
+      return p;
+    }));
+
+    setCommentInputs({ ...commentInputs, [postId]: "" });
+  };
+
+  return (
+    <section style={{ maxWidth: "800px", margin: "0 auto", padding: "20px 0" }}>
+      {/* En-tête Forum */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "20px" }}>
+        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "700" }}>
+          {t("communityForum", "Community forum")}
+        </h1>
+        <span style={{ color: "#8a99a8", fontSize: "14px" }}>
+          {t("communitySubtitle", "Contributions, questions and variants")}
+        </span>
+      </div>
+
+      {/* Bloc de publication */}
+      <div className="card" style={{ background: "#ffffff", borderRadius: "8px", padding: "16px", marginBottom: "24px", border: "1px solid #eef2f5" }}>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <div style={{ width: "40px", height: "40px", background: "#0e6b85", color: "#fff", fontWeight: "bold", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 }}>
+            {(user?.displayName || "C").slice(0, 1).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+            <select 
+              value={selectedGame} 
+              onChange={(e) => setSelectedGame(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", color: "#4b5563", background: "#fff" }}
+            >
+              <option value="">{t("linkGameOptional", "Link a game (optional)")}</option>
+              {(games || []).map(g => (
+                <option key={g.id || g.name} value={g.name}>{g.name}</option>
+              ))}
+            </select>
+
+            <textarea 
+              rows={3}
+              placeholder={t("sharePlaceholder", "Share a source, variant or question...")}
+              value={postText}
+              onChange={(e) => setPostText(e.target.value)}
+              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", resize: "vertical", fontFamily: "inherit" }}
+            />
+
+            <button 
+              className="primary"
+              onClick={handlePublish}
+              style={{ background: "#1b2a38", color: "#fff", padding: "10px 0", borderRadius: "4px", border: "none", fontWeight: "bold", cursor: "pointer" }}
+            >
+              {t("publish", "Publish")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Fil des publications */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {posts.map((post) => (
+          <div key={post.id} className="card" style={{ background: "#ffffff", borderRadius: "8px", padding: "20px", border: "1px solid #eef2f5" }}>
+            {/* Header du post */}
+            <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+              <div style={{ width: "40px", height: "40px", background: "#0e6b85", color: "#fff", fontWeight: "bold", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {post.avatar}
+              </div>
+              <div>
+                <div style={{ fontWeight: "bold", color: "#1a2b3c" }}>{post.author}</div>
+                <div style={{ fontSize: "12px", color: "#8a99a8" }}>
+                  {post.timeAgo} {post.linkedGame && `· ${post.linkedGame}`}
+                </div>
+              </div>
+            </div>
+
+            {/* Contenu */}
+            <p style={{ color: "#334155", lineHeight: "1.5", marginBottom: "16px" }}>
+              {post.content}
+            </p>
+
+            {/* Infoline (Likes et Nb commentaires) */}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#64748b", borderBottom: "1px solid #f1f5f9", paddingBottom: "12px", marginBottom: "12px" }}>
+              <span>Like ({post.likes})</span>
+              <span>{post.comments.length} comments</span>
+            </div>
+
+            {/* Liste des commentaires */}
+            {post.comments.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                {post.comments.map((c, i) => (
+                  <div key={i} style={{ fontSize: "13px", color: "#334155", lineHeight: "1.4" }}>
+                    <strong>{c.author}</strong> {c.text}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Champ pour commenter */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input 
+                type="text" 
+                placeholder={t("addComment", "Add a comment")}
+                value={commentInputs[post.id] || ""}
+                onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: "1px solid #e2e8f0", fontSize: "13px" }}
+              />
+              <button 
+                onClick={() => handleAddComment(post.id)}
+                style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "0 16px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}
+              >
+                {t("send", "Send")}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -791,30 +1149,240 @@ function LudemesPage({ games, onOpen }) {
   );
 }
 
-function CommunityPage({ user }) {
+function ProfilePage({ user, games, favs, onOpen }) {
+  const { t, i18n } = useTranslation();
+  const favGames = games.filter((g) => favs.includes(g.id));
+
+  // Données fictives/dynamiques pour correspondre à l'interface originale
+  const achievements = [
+    { title: "First step", desc: "Open your first game", icon: "◆", unlocked: true },
+    { title: "Explorer", desc: "View 5 games", icon: "◎", unlocked: true },
+    { title: "Scholar", desc: "View 10 games", icon: "◈", unlocked: false },
+    { title: "First favorite", desc: "Add 1 game to favorites", icon: "♥", unlocked: false },
+    { title: "Collector", desc: "5 games in favorites", icon: "★", unlocked: false },
+    { title: "Globetrotter", desc: "Explore 3 regions", icon: "●", unlocked: true }
+  ];
+
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+
   return (
-    <section style={{ padding: "20px 0", maxWidth: "700px", margin: "0 auto" }}>
-      <h2>Espace Communauté</h2>
-      <div className="card" style={{ padding: "20px", marginTop: "16px" }}>
-        <p>Bienvenue dans l'espace communautaire LudoHeritage !</p>
+    <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px 0" }}>
+      {/* 1. Bandeau supérieur : Game of the Day + Stats */}
+      <div
+        className="card"
+        style={{
+          background: "#f7f5f0",
+          borderRadius: "8px",
+          padding: "24px",
+          marginBottom: "24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          border: "1px solid #eae6df"
+        }}
+      >
+        <div style={{ maxWidth: "60%" }}>
+          <span style={{ fontSize: "11px", fontWeight: "bold", color: "#7a8a99", letterSpacing: "1px" }}>
+            {t("gameOfDay", "GAME OF THE DAY")}
+          </span>
+          <h2 style={{ margin: "8px 0", fontSize: "32px", color: "#1a2b3c" }}>Mu Torere</h2>
+          <p style={{ color: "#5a6a79", fontSize: "14px", lineHeight: "1.4", marginBottom: "16px" }}>
+            The only traditional board game of the Māori people — played on an eight-pointed star with a central hub.
+          </p>
+          <button
+            onClick={() => onOpen && onOpen(games.find((g) => g.name === "Mu Torere") || games[0])}
+            style={{
+              background: "#1b2a38",
+              color: "#fff",
+              border: "none",
+              padding: "10px 18px",
+              borderRadius: "4px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              fontSize: "13px"
+            }}
+          >
+            {t("discover", "Discover this game")}
+          </button>
+        </div>
+
+        {/* Blocs de statistiques à droite */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "180px" }}>
+          {[
+            { count: games.length || 42, label: t("games", "games") },
+            { count: 4, label: t("regions", "regions") },
+            { count: 30, label: t("categories", "categories") },
+            { count: favs.length, label: t("favorites", "favorites") }
+          ].map((stat, idx) => (
+            <div
+              key={idx}
+              style={{
+                background: "#ffffff",
+                padding: "8px 16px",
+                borderRadius: "4px",
+                display: "flex",
+                alignItems: "baseline",
+                gap: "8px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+              }}
+            >
+              <strong style={{ fontSize: "18px", color: "#1a2b3c" }}>{stat.count}</strong>
+              <small style={{ color: "#7a8a99", fontSize: "12px" }}>{stat.label}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Carte d'identité Profil */}
+      <div
+        className="card"
+        style={{
+          background: "#ffffff",
+          borderRadius: "8px",
+          padding: "24px",
+          marginBottom: "28px",
+          border: "1px solid #eef2f5",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start"
+        }}
+      >
+        <div style={{ display: "flex", gap: "20px" }}>
+          {/* Avatar carré bleu/vert */}
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              background: "#0e6b85",
+              color: "#ffffff",
+              fontSize: "24px",
+              fontWeight: "bold",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
+          >
+            {(user?.displayName || "C").slice(0, 1).toUpperCase()}
+          </div>
+
+          <div>
+            <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", color: "#1a2b3c" }}>
+              {user?.displayName || "ClientName"}
+            </h2>
+            <p style={{ margin: "0 0 16px 0", color: "#7a8a99", fontSize: "14px" }}>
+              {user?.email || "clientname@gmail.com"}
+            </p>
+
+            {/* Grille de métriques personnelles */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              {[
+                { label: "FAVORITES", value: favs.length },
+                { label: "VIEWED", value: 7 },
+                { label: "POSTS", value: 0 },
+                { label: "ACHIEVEMENTS", value: unlockedCount }
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    background: "#f4f0e8",
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    textAlign: "center",
+                    minWidth: "75px"
+                  }}
+                >
+                  <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1a2b3c" }}>{item.value}</div>
+                  <div style={{ fontSize: "9px", color: "#7a8a99", fontWeight: "bold", marginTop: "2px" }}>
+                    {item.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          style={{
+            background: "#ffffff",
+            border: "1px solid #1a2b3c",
+            color: "#1a2b3c",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            fontWeight: "bold",
+            fontSize: "13px",
+            cursor: "pointer"
+          }}
+        >
+          {t("editPreferences", "Edit preferences")}
+        </button>
+      </div>
+
+      {/* 3. Section Preferences */}
+      <div style={{ marginBottom: "28px" }}>
+        <h2 style={{ fontSize: "22px", marginBottom: "16px", color: "#1a2b3c" }}>Preferences</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+          {[
+            { tag: "LEVEL", val: "Amateur" },
+            { tag: "PREFERRED TYPE", val: "Strategy" },
+            { tag: "REGION", val: "Europe" },
+            { tag: "LANGUAGE", val: i18n.language === "fr" ? "French" : "English" }
+          ].map((pref, idx) => (
+            <div
+              key={idx}
+              className="card"
+              style={{
+                background: "#ffffff",
+                padding: "16px",
+                borderRadius: "6px",
+                border: "1px solid #eef2f5"
+              }}
+            >
+              <div style={{ fontSize: "10px", fontWeight: "bold", color: "#7a8a99", marginBottom: "6px" }}>
+                {pref.tag}
+              </div>
+              <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1a2b3c" }}>{pref.val}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Section Achievements */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
+          <h2 style={{ fontSize: "22px", margin: 0, color: "#1a2b3c" }}>Achievements</h2>
+          <span style={{ fontSize: "13px", color: "#7a8a99" }}>
+            {unlockedCount} / {achievements.length} unlocked
+          </span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "12px" }}>
+          {achievements.map((ach, idx) => (
+            <div
+              key={idx}
+              className="card"
+              style={{
+                background: ach.unlocked ? "#e6f0f2" : "#ffffff",
+                padding: "16px 12px",
+                borderRadius: "6px",
+                border: ach.unlocked ? "1px solid #b3d4dc" : "1px solid #eef2f5",
+                textAlign: "center",
+                opacity: ach.unlocked ? 1 : 0.6
+              }}
+            >
+              <div style={{ fontSize: "20px", marginBottom: "8px", color: "#0e6b85" }}>{ach.icon}</div>
+              <div style={{ fontSize: "13px", fontWeight: "bold", color: "#1a2b3c", marginBottom: "4px" }}>
+                {ach.title}
+              </div>
+              <div style={{ fontSize: "11px", color: "#7a8a99", lineHeight: "1.2" }}>{ach.desc}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function ProfilePage({ user, games, favs, onOpen }) {
-  const favGames = games.filter(g => favs.includes(g.id));
-  return (
-    <section style={{ padding: "20px 0", maxWidth: "800px", margin: "0 auto" }}>
-      <h2>Profil Utilisateur</h2>
-      <div className="card" style={{ padding: "20px", marginTop: "16px" }}>
-        <p><strong>Joueur :</strong> {user?.displayName || "Utilisateur"}</p>
-        <p><strong>Email :</strong> {user?.email || "Non renseigné"}</p>
-        <p><strong>Favoris :</strong> {favGames.length} jeu(x)</p>
-      </div>
-    </section>
-  );
-}
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 
