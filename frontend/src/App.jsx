@@ -773,6 +773,48 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
+
+function LudemesPage({ games, onOpen }) {
+  const allLudemes = Array.from(new Set(games.flatMap(g => g.ludemes || g.mechanics || ["Placement", "Capture", "Course", "Dés"])));
+  return (
+    <section style={{ padding: "20px 0" }}>
+      <h2>Bibliothèque des Ludèmes</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px", marginTop: "16px" }}>
+        {allLudemes.map((ludeme, idx) => (
+          <div key={idx} className="card" style={{ padding: "16px" }}>
+            <h3 style={{ marginTop: 0, color: "#4ba3e3" }}>{ludeme}</h3>
+            <p style={{ fontSize: "14px" }}>Mécanique de jeu</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CommunityPage({ user }) {
+  return (
+    <section style={{ padding: "20px 0", maxWidth: "700px", margin: "0 auto" }}>
+      <h2>Espace Communauté</h2>
+      <div className="card" style={{ padding: "20px", marginTop: "16px" }}>
+        <p>Bienvenue dans l'espace communautaire LudoHeritage !</p>
+      </div>
+    </section>
+  );
+}
+
+function ProfilePage({ user, games, favs, onOpen }) {
+  const favGames = games.filter(g => favs.includes(g.id));
+  return (
+    <section style={{ padding: "20px 0", maxWidth: "800px", margin: "0 auto" }}>
+      <h2>Profil Utilisateur</h2>
+      <div className="card" style={{ padding: "20px", marginTop: "16px" }}>
+        <p><strong>Joueur :</strong> {user?.displayName || "Utilisateur"}</p>
+        <p><strong>Email :</strong> {user?.email || "Non renseigné"}</p>
+        <p><strong>Favoris :</strong> {favGames.length} jeu(x)</p>
+      </div>
+    </section>
+  );
+}
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 
@@ -951,7 +993,11 @@ export default function App() {
         {tab === "Chronologie" && <Timeline games={games} onOpen={setSelectedGame} />}
         {tab === "Comparer" && <ComparePage games={games} onOpen={setSelectedGame} />}
         {tab === "Quiz" && <QuizPage user={user} games={games} leaderboard={leaderboard} onScoreSubmit={(sc, tot) => setLeaderboard([...leaderboard, { id: Date.now(), displayName: user.displayName, score: sc, total: tot }])} />}
-      </main>
+        {tab === "Ludemes" && <LudemesPage games={games} onOpen={setSelectedGame} />}
+        {tab === "Communaute" && <CommunityPage user={user} />}
+        {tab === "Profil" && <ProfilePage user={user} games={games} favs={favs} onOpen={setSelectedGame} />}
+       </main> 
+     </main>
 
       <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} isFav={selectedGame && favs.includes(selectedGame.id)} onToggleFav={toggleFav} />
     </div>
