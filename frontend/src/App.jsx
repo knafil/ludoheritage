@@ -738,6 +738,9 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
+// ─── Main App Shell ──────────────────────────────────────────────────────────
+
+const RENDER_BACKEND_URL = "https://ludoheritage.onrender.com";
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -758,14 +761,22 @@ export default function App() {
 
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Chancer la langue
+  // Base API URL depuis Vercel ou fallback Render direct
+  const apiBaseUrl = import.meta.env.VITE_API_URL || RENDER_BACKEND_URL;
+
+  // Changer la langue
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
   };
 
   useEffect(() => {
-    getJson(`${API_BASE}/api/games`, FALLBACK_GAMES).then(setGames);
-  }, []);
+    // Appel sur la route exacte du contrôleur Spring Boot (/api/jeux)
+    getJson(`${apiBaseUrl}/api/jeux`, FALLBACK_GAMES).then(fetchedGames => {
+      if (Array.isArray(fetchedGames) && fetchedGames.length > 0) {
+        setGames(fetchedGames);
+      }
+    });
+  }, [apiBaseUrl]);
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
@@ -778,7 +789,7 @@ export default function App() {
       return;
     }
 
-    const endpoint = mode === "login" ? `${API_BASE}/api/auth/login` : `${API_BASE}/api/auth/register`;
+    const endpoint = mode === "login" ? `${apiBaseUrl}/api/auth/login` : `${apiBaseUrl}/api/auth/register`;
     try {
       const res = await fetch(endpoint, {
         method: "POST",
@@ -880,7 +891,7 @@ export default function App() {
 
             <div className="game-grid">
               {games.map(g => (
-                <GameCard key={g.id} game={g} onOpen={setSelectedGame} isFav={favs.includes(g.id)} onToggleFav={toggleFav} />
+                <GameCard key={g.id || g.name} game={g} onOpen={setSelectedGame} isFav={favs.includes(g.id)} onToggleFav={toggleFav} />
               ))}
             </div>
           </section>
