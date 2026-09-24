@@ -996,7 +996,7 @@ export default function App() {
         {tab === "Ludemes" && <LudemesPage games={games} onOpen={setSelectedGame} />}
         {tab === "Communaute" && <CommunityPage user={user} />}
         {tab === "Profil" && <ProfilePage user={user} games={games} favs={favs} onOpen={setSelectedGame} />}
-       </main> 
+        
      </main>
 
       <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} isFav={selectedGame && favs.includes(selectedGame.id)} onToggleFav={toggleFav} />
