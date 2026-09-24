@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const rawApiBase = import.meta.env.VITE_API_URL || "http://localhost:8080";
+// Supprime le slash final s'il existe
+const API_BASE = rawApiBase.endsWith('/') ? rawApiBase.slice(0,-1) : rawApiBase;
 const STORAGE_KEY = "ludoheritage-user";
 const FAV_KEY    = "ludoheritage-favs";
 const RECENT_KEY = "ludoheritage-recent";
