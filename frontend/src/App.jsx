@@ -416,56 +416,90 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-
-function WorldMap({ games = [], onOpen }) {
+function WorldMap({ games = [], onSelectGame, onOpen }) {
   const { t } = useTranslation();
   const [hoveredGame, setHoveredGame] = useState(null);
 
-  // Carte de correspondance forcée (Hardcoded) : Région -> Position % visuelle
-  const regionToCoords = {
-    // Asie
-    "East Asia": { x: 80, y: 38 },
-    "South Asia": { x: 70, y: 46 },
-    "Japan": { x: 86, y: 36 },
-    "China": { x: 79, y: 38 },
-    "Korea": { x: 82, y: 36 },
-    "Asia": { x: 76, y: 42 },
-    // Afrique / Moyen-Orient
-    "North Africa": { x: 52, y: 38 },
-    "Sub-Saharan Africa": { x: 50, y: 56 },
-    "Middle East": { x: 58, y: 40 },
-    "Arab World": { x: 55, y: 38 },
-    "Egypt": { x: 55, y: 38 },
-    // Europe
-    "Europe": { x: 50, y: 28 },
-    "Greece": { x: 52, y: 31 },
-    "Rome": { x: 52, y: 31 },
-    // Amériques
-    "Americas": { x: 28, y: 50 },
-    "North America": { x: 22, y: 32 },
-    "South America": { x: 30, y: 65 },
-    // Océanie
-    "Oceania": { x: 86, y: 72 }
+  const handleGameClick = (game) => {
+    if (onSelectGame) onSelectGame(game);
+    else if (onOpen) onOpen(game);
   };
 
-  const getCoordinates = (game) => {
-    const regionName = game.region || game.origin || "";
-    const base = regionToCoords[regionName] || { x: 50, y: 40 }; // Centre par défaut si non trouvé
+  // Coordonnées de référence (% X, Y) basées sur vos champs `region` ou `country`
+  const getBaseCoordinates = (game) => {
+    const region = (game.region || "").toLowerCase().trim();
+    const country = (game.country || "").toLowerCase().trim();
 
-    // Dispersion pour éviter la superposition exacte
-    const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const offsetX = ((hash % 11) - 5) * 1.5;
-    const offsetY = (((hash >> 2) % 11) - 5) * 1.5;
+    // 1. Détection prioritaire par Pays (Country)
+    if (country.includes("japan") || country.includes("japon")) return { x: 86, y: 35 };
+    if (country.includes("china") || country.includes("chine")) return { x: 78, y: 38 };
+    if (country.includes("korea") || country.includes("corée")) return { x: 82, y: 36 };
+    if (country.includes("india") || country.includes("inde")) return { x: 70, y: 46 };
+    if (country.includes("egypt") || country.includes("égypte")) return { x: 56, y: 38 };
+    if (country.includes("france") || country.includes("greece") || country.includes("grèce") || country.includes("italy")) return { x: 49, y: 28 };
 
-    return { x: base.x + offsetX, y: base.y + offsetY };
+    // 2. Détection par Région (Region)
+    if (region.includes("east asia") || region.includes("asie de l'est")) return { x: 80, y: 38 };
+    if (region.includes("south asia") || region.includes("asie du sud")) return { x: 70, y: 46 };
+    if (region.includes("southeast asia") || region.includes("asie du sud-est")) return { x: 78, y: 50 };
+    if (region.includes("asia") || region.includes("asie")) return { x: 76, y: 40 };
+
+    if (region.includes("middle east") || region.includes("moyen-orient") || region.includes("arab")) return { x: 60, y: 40 };
+    if (region.includes("north africa") || region.includes("afrique du nord")) return { x: 52, y: 38 };
+    if (region.includes("sub-saharan") || region.includes("west africa") || region.includes("afrique")) return { x: 50, y: 56 };
+
+    if (region.includes("europe") || region.includes("mediterranean")) return { x: 50, y: 26 };
+    if (region.includes("north america") || region.includes("amérique du nord")) return { x: 22, y: 32 };
+    if (region.includes("south america") || region.includes("amérique du sud") || region.includes("latin")) return { x: 30, y: 65 };
+    if (region.includes("oceania") || region.includes("océanie")) return { x: 86, y: 72 };
+
+    // Fallback central
+    return { x: 50, y: 45 };
   };
 
-  const getRegionColor = (regionStr = "") => {
-    if (regionStr.includes("Africa") || regionStr.includes("Middle East") || regionStr.includes("Arab")) return "#e69c55"; // Orange
-    if (regionStr.includes("Europe")) return "#82b366"; // Vert
-    if (regionStr.includes("America")) return "#9673a6"; // Violet
-    if (regionStr.includes("Asia") || regionStr.includes("Japan") || regionStr.includes("China")) return "#4ba3e3"; // Bleu Asie
-    return "#6c8ebf"; // Bleu par défaut
+  // Traitement pour dé-superposer les 20 jeux et éviter qu'ils se cachent
+  const processedGames = useMemo(() => {
+    const mapGroups = {};
+
+    // Regrouper par coordonnées de base
+    games.forEach((game) => {
+      const coords = getBaseCoordinates(game);
+      const key = `${coords.x}_${coords.y}`;
+      if (!mapGroups[key]) mapGroups[key] = [];
+      mapGroups[key].push(game);
+    });
+
+    // Calculer l'offset pour chaque jeu du même groupe
+    const result = [];
+    Object.values(mapGroups).forEach((group) => {
+      if (group.length === 1) {
+        const coords = getBaseCoordinates(group[0]);
+        result.push({ ...group[0], mapX: coords.x, mapY: coords.y });
+      } else {
+        const total = group.length;
+        group.forEach((game, index) => {
+          const coords = getBaseCoordinates(game);
+          const angle = (index / total) * 2 * Math.PI;
+          const radius = 3.2; // Écartement suffisant pour voir tous les marqueurs
+          result.push({
+            ...game,
+            mapX: coords.x + Math.cos(angle) * radius,
+            mapY: coords.y + Math.sin(angle) * radius
+          });
+        });
+      }
+    });
+
+    return result;
+  }, [games]);
+
+  const getRegionColor = (regionStr = "", countryStr = "") => {
+    const text = (regionStr + " " + countryStr).toLowerCase();
+    if (text.includes("africa") || text.includes("afrique") || text.includes("arab") || text.includes("egypt")) return "#e69c55"; // Orange
+    if (text.includes("europe") || text.includes("greece") || text.includes("rome")) return "#82b366"; // Vert
+    if (text.includes("america") || text.includes("amérique")) return "#9673a6"; // Violet
+    if (text.includes("asia") || text.includes("asie") || text.includes("japan") || text.includes("china") || text.includes("india")) return "#4ba3e3"; // Bleu Asie
+    return "#36b3a0"; // Turquoise
   };
 
   return (
@@ -482,7 +516,7 @@ function WorldMap({ games = [], onOpen }) {
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
         }}
       >
-        {/* Silhouette de la Carte du Monde géographique réaliste */}
+        {/* Silhouette SVG de la Carte */}
         <div
           style={{
             position: "absolute",
@@ -496,22 +530,24 @@ function WorldMap({ games = [], onOpen }) {
           }}
         />
 
-        {/* Repères des jeux */}
-        {games.map((game) => {
-          const { x, y } = getCoordinates(game);
-          const color = getRegionColor(game.region);
-          const isHovered = hoveredGame?.name === game.name;
+        {/* Repères pour les 20 jeux */}
+        {processedGames.map((game) => {
+          const color = getRegionColor(game.region, game.country);
+          const isHovered = hoveredGame?.id === game.id || hoveredGame?.name === game.name;
 
           return (
             <div
               key={game.id || game.name}
-              onClick={() => onOpen && onOpen(game)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGameClick(game);
+              }}
               onMouseEnter={() => setHoveredGame(game)}
               onMouseLeave={() => setHoveredGame(null)}
               style={{
                 position: "absolute",
-                left: `${x}%`,
-                top: `${y}%`,
+                left: `${game.mapX}%`,
+                top: `${game.mapY}%`,
                 transform: "translate(-50%, -50%)",
                 cursor: "pointer",
                 padding: "8px",
@@ -536,7 +572,7 @@ function WorldMap({ games = [], onOpen }) {
                 <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
               </div>
 
-              {/* Infobulle Tooltip au survol - i18n restauré */}
+              {/* Tooltip au survol */}
               {isHovered && (
                 <div
                   style={{
@@ -552,21 +588,21 @@ function WorldMap({ games = [], onOpen }) {
                     pointerEvents: "none",
                     zIndex: 200,
                     textAlign: "left"
-                    }}
+                  }}
                 >
                   <h4 style={{ margin: "0 0 2px 0", color: "#1a2b3c", fontSize: "15px", fontWeight: "bold" }}>
                     {game.name}
                   </h4>
                   <p style={{ margin: "0 0 8px 0", color: "#7a8a99", fontSize: "11px" }}>
-                    {game.region || t('traditional', 'Traditional')}
+                    {game.country ? `${game.country} (${game.region})` : game.region || "Traditionnel"}
                   </p>
 
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
                     <span style={{ backgroundColor: "#f0f4f8", color: "#4a5a6a", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
-                      {game.category || t('strategy', 'Strategy')}
+                      {game.type || "Stratégie"}
                     </span>
                     <span style={{ backgroundColor: "#e6f2ed", color: "#2e7d5b", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
-                      {game.difficulty || t('beginner', 'Beginner')}
+                      {game.difficulty || "Facile"}
                     </span>
                   </div>
                 </div>
