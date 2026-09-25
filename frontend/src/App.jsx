@@ -416,100 +416,62 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-function WorldMap({ games = [], onSelectGame, onOpen }) {
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+function WorldMap({ games = [], onOpen }) {
   const { t } = useTranslation();
   const [hoveredGame, setHoveredGame] = useState(null);
 
-  const handleGameClick = (game) => {
-    if (onSelectGame) onSelectGame(game);
-    else if (onOpen) onOpen(game);
+  // Carte de correspondance forcée (Hardcoded) : Région -> Position % visuelle
+  const regionToCoords = {
+    // Asie
+    "East Asia": { x: 80, y: 38 },
+    "South Asia": { x: 70, y: 46 },
+    "Japan": { x: 86, y: 36 },
+    "China": { x: 79, y: 38 },
+    "Korea": { x: 82, y: 36 },
+    "Asia": { x: 76, y: 42 },
+    // Afrique / Moyen-Orient
+    "North Africa": { x: 52, y: 38 },
+    "Sub-Saharan Africa": { x: 50, y: 56 },
+    "Middle East": { x: 58, y: 40 },
+    "Arab World": { x: 55, y: 38 },
+    "Egypt": { x: 55, y: 38 },
+    // Europe
+    "Europe": { x: 50, y: 28 },
+    "Greece": { x: 52, y: 31 },
+    "Rome": { x: 52, y: 31 },
+    // Amériques
+    "Americas": { x: 28, y: 50 },
+    "North America": { x: 22, y: 32 },
+    "South America": { x: 30, y: 65 },
+    // Océanie
+    "Oceania": { x: 86, y: 72 }
   };
 
-  // Coordonnées ajustées visuellement sur la carte SVG du fond (%)
-  const getCoordinatesForGame = (game) => {
-    // Si coordonnées lat/lng numériques valides
-    if (typeof game.lat === "number" && typeof game.lng === "number") {
-      const x = ((game.lng + 180) * 100) / 360;
-      const y = 50 - (game.lat * 100) / 180;
-      return { x, y };
-    }
+  const getCoordinates = (game) => {
+    const regionName = game.region || game.origin || "";
+    const base = regionToCoords[regionName] || { x: 50, y: 40 }; // Centre par défaut si non trouvé
 
-    const region = (game.region || game.origin || game.country || "").toLowerCase();
+    // Dispersion pour éviter la superposition exacte
+    const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const offsetX = ((hash % 11) - 5) * 1.5;
+    const offsetY = (((hash >> 2) % 11) - 5) * 1.5;
 
-    // Emplacements précis sur le SVG
-    if (region.includes("china") || region.includes("chine")) return { x: 79, y: 38 };
-    if (region.includes("japan") || region.includes("japon")) return { x: 86, y: 36 };
-    if (region.includes("korea") || region.includes("corée")) return { x: 82, y: 36 };
-    if (region.includes("india") || region.includes("inde")) return { x: 70, y: 46 };
-    if (region.includes("southeast") || region.includes("asia")) return { x: 76, y: 44 };
-    
-    if (region.includes("middle east") || region.includes("moyen-orient") || region.includes("persia") || region.includes("iraq")) return { x: 61, y: 38 };
-    if (region.includes("egypt") || region.includes("égypte") || region.includes("north africa")) return { x: 55, y: 38 };
-    if (region.includes("west africa") || region.includes("senegal") || region.includes("mali") || region.includes("ghana")) return { x: 45, y: 48 };
-    if (region.includes("sub-saharan") || region.includes("africa") || region.includes("afrique")) return { x: 52, y: 56 };
-
-    if (region.includes("greece") || region.includes("grèce") || region.includes("rome") || region.includes("italy")) return { x: 52, y: 31 };
-    if (region.includes("europe") || region.includes("france") || region.includes("spain")) return { x: 48, y: 26 };
-    if (region.includes("scandinavia") || region.includes("vikings")) return { x: 50, y: 18 };
-
-    if (region.includes("north america") || region.includes("usa")) return { x: 22, y: 30 };
-    if (region.includes("south america") || region.includes("maya") || region.includes("incan")) return { x: 30, y: 62 };
-
-    // Fallback central
-    return { x: 50, y: 40 };
+    return { x: base.x + offsetX, y: base.y + offsetY };
   };
-
-  // Traitement pour étaler les jeux superposés et afficher l'intégralité des 20 jeux
-  const processedGames = useMemo(() => {
-    const coordsCount = {};
-
-    return games.map((game, index) => {
-      const base = getCoordinatesForGame(game);
-      const key = `${Math.round(base.x)}_${Math.round(base.y)}`;
-
-      if (!coordsCount[key]) {
-        coordsCount[key] = 0;
-      }
-      
-      const count = coordsCount[key];
-      coordsCount[key] += 1;
-
-      // Si plusieurs jeux partagent le même emplacement, on les écarte en cercle
-      if (count > 0) {
-        const angle = (count * 2 * Math.PI) / 5;
-        const radius = 2.8; // Écartement en %
-        return {
-          ...game,
-          mapX: base.x + Math.cos(angle) * radius,
-          mapY: base.y + Math.sin(angle) * radius
-        };
-      }
-
-      return {
-        ...game,
-        mapX: base.x,
-        mapY: base.y
-      };
-    });
-  }, [games]);
 
   const getRegionColor = (regionStr = "") => {
-    const reg = regionStr.toLowerCase();
-    if (reg.includes("africa") || reg.includes("afrique") || reg.includes("arab") || reg.includes("egypt")) return "#e69c55"; // Orange
-    if (reg.includes("europe") || reg.includes("rome") || reg.includes("greece")) return "#82b366"; // Vert
-    if (reg.includes("america") || reg.includes("amérique")) return "#9673a6"; // Violet
-    if (reg.includes("asia") || reg.includes("asie") || reg.includes("japan") || reg.includes("china") || reg.includes("india")) return "#4ba3e3"; // Bleu
-    return "#36b3a0"; // Turquoise
+    if (regionStr.includes("Africa") || regionStr.includes("Middle East") || regionStr.includes("Arab")) return "#e69c55"; // Orange
+    if (regionStr.includes("Europe")) return "#82b366"; // Vert
+    if (regionStr.includes("America")) return "#9673a6"; // Violet
+    if (regionStr.includes("Asia") || regionStr.includes("Japan") || regionStr.includes("China")) return "#4ba3e3"; // Bleu Asie
+    return "#6c8ebf"; // Bleu par défaut
   };
 
   return (
     <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-        <span style={{ fontSize: "14px", color: "#7a8a99", fontWeight: "600" }}>
-          Affichage sur la carte : <strong style={{ color: "#1a2b3c" }}>{processedGames.length} jeux</strong>
-        </span>
-      </div>
-
       <div
         style={{
           position: "relative",
@@ -522,7 +484,7 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
         }}
       >
-        {/* Silhouette de la Carte du Monde */}
+        {/* Silhouette de la Carte du Monde géographique réaliste */}
         <div
           style={{
             position: "absolute",
@@ -537,23 +499,21 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
         />
 
         {/* Repères des jeux */}
-        {processedGames.map((game) => {
-          const color = getRegionColor(game.region || game.origin);
+        {games.map((game) => {
+          const { x, y } = getCoordinates(game);
+          const color = getRegionColor(game.region);
           const isHovered = hoveredGame?.name === game.name;
 
           return (
             <div
               key={game.id || game.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleGameClick(game);
-              }}
+              onClick={() => onOpen && onOpen(game)}
               onMouseEnter={() => setHoveredGame(game)}
               onMouseLeave={() => setHoveredGame(null)}
               style={{
                 position: "absolute",
-                left: `${game.mapX}%`,
-                top: `${game.mapY}%`,
+                left: `${x}%`,
+                top: `${y}%`,
                 transform: "translate(-50%, -50%)",
                 cursor: "pointer",
                 padding: "8px",
@@ -575,17 +535,10 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
                   boxShadow: isHovered ? `0 0 14px ${color}` : "none"
                 }}
               >
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: "#ffffff"
-                  }}
-                />
+                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
               </div>
 
-              {/* Tooltip au survol */}
+              {/* Infobulle Tooltip au survol - i18n restauré */}
               {isHovered && (
                 <div
                   style={{
@@ -601,47 +554,23 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
                     pointerEvents: "none",
                     zIndex: 200,
                     textAlign: "left"
-                  }}
+                    }}
                 >
                   <h4 style={{ margin: "0 0 2px 0", color: "#1a2b3c", fontSize: "15px", fontWeight: "bold" }}>
                     {game.name}
                   </h4>
                   <p style={{ margin: "0 0 8px 0", color: "#7a8a99", fontSize: "11px" }}>
-                    {game.region || game.origin || "Traditionnel"}
+                    {game.region || t('traditional', 'Traditional')}
                   </p>
 
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                    <span
-                      style={{
-                        backgroundColor: "#f0f4f8",
-                        color: "#4a5a6a",
-                        fontSize: "10px",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        fontWeight: "600"
-                      }}
-                    >
-                      {game.category || "Strategy"}
+                    <span style={{ backgroundColor: "#f0f4f8", color: "#4a5a6a", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
+                      {game.category || t('strategy', 'Strategy')}
                     </span>
-                    <span
-                      style={{
-                        backgroundColor: "#e6f2ed",
-                        color: "#2e7d5b",
-                        fontSize: "10px",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        fontWeight: "600"
-                      }}
-                    >
-                      {game.difficulty || "Beginner"}
+                    <span style={{ backgroundColor: "#e6f2ed", color: "#2e7d5b", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
+                      {game.difficulty || t('beginner', 'Beginner')}
                     </span>
                   </div>
-
-                  {game.period && (
-                    <div style={{ marginTop: "6px", fontSize: "10px", color: "#9a8a78", fontStyle: "italic" }}>
-                      ~{game.period}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -651,7 +580,6 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
-
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
