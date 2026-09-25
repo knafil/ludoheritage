@@ -875,104 +875,156 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
-function LudemesPage({ games, onSelectGame, onOpen }) {
+function LudemesPage({ games = [], onSelectGame, onOpen }) {
   const { t } = useTranslation();
-  const [selectedLudeme, setSelectedLudeme] = useState(null);
 
-  // Fonction universelle pour ouvrir un jeu
   const handleOpenGame = (game) => {
     if (onSelectGame) onSelectGame(game);
     else if (onOpen) onOpen(game);
   };
 
-  // Exemple de liste des ludèmes extraite des jeux
+  // Liste des ludèmes avec mots-clés de recherche associés
   const ludemesList = [
-    { id: "alignment", name: "Alignment", desc: "Games based on aligning pieces in a row", count: 12 },
-    { id: "race", name: "Race", desc: "Games where players race pieces along a track", count: 8 },
-    { id: "mancala", name: "Sowing / Mancala", desc: "Games involving counting and distributing seeds", count: 10 },
-    { id: "blocking", name: "Blocking", desc: "Games focused on trapping or blocking opponent movement", count: 6 },
-    { id: "territory", name: "Territory", desc: "Games about occupying and controlling space", count: 5 }
+    {
+      id: "alignment",
+      name: "Alignment",
+      desc: "Games based on aligning pieces in a row",
+      keywords: ["alignment", "alignement", "row", "line", "morris", "tictactoe", "alquerque"]
+    },
+    {
+      id: "race",
+      name: "Race",
+      desc: "Games where players race pieces along a track",
+      keywords: ["race", "parcheesi", "ludo", "senet", "backgammon", "track", "course"]
+    },
+    {
+      id: "mancala",
+      name: "Sowing / Mancala",
+      desc: "Games involving counting and distributing seeds",
+      keywords: ["mancala", "sowing", "awale", "oware", "seeds", "egrenage", "semence"]
+    },
+    {
+      id: "blocking",
+      name: "Blocking",
+      desc: "Games focused on trapping or blocking opponent movement",
+      keywords: ["blocking", "trap", "block", "trapping", "blocage", "impasses"]
+    },
+    {
+      id: "territory",
+      name: "Territory",
+      desc: "Games about occupying and controlling space",
+      keywords: ["territory", "go", "reversi", "othello", "occupy", "territoire", "domination"]
+    }
   ];
 
+  // Filtre les jeux correspondant à un ludème spécifique
+  const getMatchingGames = (ludeme) => {
+    return games.filter((game) => {
+      const textToSearch = [
+        game.category,
+        game.family,
+        game.ludeme,
+        game.type,
+        game.description,
+        game.name
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return ludeme.keywords.some((keyword) => textToSearch.includes(keyword.toLowerCase()));
+    });
+  };
+
   return (
-    <section style={{ padding: "20px 0", maxWidth: "1000px", margin: "0 auto" }}>
-      <h2 style={{ fontSize: "24px", color: "#1a2b3c", marginBottom: "8px" }}>Ludemes</h2>
-      <p style={{ color: "#7a8a99", marginBottom: "24px", fontSize: "14px" }}>
+    <section style={{ padding: "20px 0", maxWidth: "1100px", margin: "0 auto" }}>
+      <h2 style={{ fontSize: "26px", color: "#1a2b3c", marginBottom: "6px" }}>Ludemes</h2>
+      <p style={{ color: "#7a8a99", marginBottom: "28px", fontSize: "14px" }}>
         Explore games grouped by their core conceptual building blocks (ludemes).
       </p>
 
-      {/* Grille des cartes Ludèmes */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
         {ludemesList.map((ludeme) => {
-          // Jeux associés à ce ludème
-          const matchingGames = (games || []).filter(
-            (g) => g.category?.toLowerCase() === ludeme.id || g.ludeme === ludeme.id
-          );
+          const matchingGames = getMatchingGames(ludeme);
 
           return (
             <div
               key={ludeme.id}
-              className="card"
               style={{
                 background: "#ffffff",
-                borderRadius: "8px",
-                padding: "20px",
+                borderRadius: "10px",
+                padding: "22px",
                 border: "1px solid #eef2f5",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between"
               }}
             >
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <h3 style={{ margin: 0, fontSize: "18px", color: "#1a2b3c" }}>{ludeme.name}</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <h3 style={{ margin: 0, fontSize: "19px", color: "#1a2b3c", fontWeight: "bold" }}>{ludeme.name}</h3>
                   <span
                     style={{
                       background: "#f0f4f8",
-                      color: "#1a2b3c",
+                      color: "#2c4d6f",
                       fontSize: "12px",
-                      fontWeight: "bold",
-                      padding: "2px 8px",
+                      fontWeight: "700",
+                      padding: "4px 10px",
                       borderRadius: "12px"
                     }}
                   >
-                    {matchingGames.length || ludeme.count} jeux
+                    {matchingGames.length} jeux
                   </span>
                 </div>
-                <p style={{ color: "#5a6a79", fontSize: "13px", lineHeight: "1.4", marginBottom: "16px" }}>
+                <p style={{ color: "#6a7a89", fontSize: "13px", lineHeight: "1.5", marginBottom: "18px" }}>
                   {ludeme.desc}
                 </p>
               </div>
 
-              {/* Liste cliquable des jeux appartenant à ce ludème */}
-              <div style={{ borderTop: "1px solid #f0f4f8", paddingTop: "12px", marginTop: "8px" }}>
-                <div style={{ fontSize: "11px", fontWeight: "bold", color: "#7a8a99", marginBottom: "8px" }}>
+              <div style={{ borderTop: "1px solid #f0f4f8", paddingTop: "14px", marginTop: "10px" }}>
+                <div style={{ fontSize: "11px", fontWeight: "bold", color: "#8a9aA9", marginBottom: "10px", letterSpacing: "0.5px" }}>
                   EXEMPLES :
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {(matchingGames.length > 0 ? matchingGames : games.slice(0, 3)).map((game) => (
-                    <button
-                      key={game.id || game.name}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenGame(game);
-                      }}
-                      style={{
-                        background: "#f4f0e8",
-                        border: "1px solid #e0d8cb",
-                        color: "#1a2b3c",
-                        padding: "4px 10px",
-                        borderRadius: "4px",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        pointerEvents: "auto" // Assure la réactivité du clic
-                      }}
-                    >
-                      {game.name}
-                    </button>
-                  ))}
+
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {matchingGames.length > 0 ? (
+                    matchingGames.map((game) => (
+                      <button
+                        key={game.id || game.name}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenGame(game);
+                        }}
+                        style={{
+                          background: "#f5f0e6",
+                          border: "1px solid #dfd5c3",
+                          color: "#1a2b3c",
+                          padding: "6px 12px",
+                          borderRadius: "6px",
+                          fontSize: "13px",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "#eadaa8";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "#f5f0e6";
+                          e.currentTarget.style.transform = "translateY(0)";
+                        }}
+                      >
+                        {game.name}
+                      </button>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: "12px", color: "#a0acb8", fontStyle: "italic" }}>
+                      Aucun jeu trouvé pour ce ludème
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -982,8 +1034,6 @@ function LudemesPage({ games, onSelectGame, onOpen }) {
     </section>
   );
 }
-
-
 
 
 
