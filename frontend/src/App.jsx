@@ -444,29 +444,29 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     if (text.includes("japan") || text.includes("japon")) return { x: 87, y: 35 };
     if (text.includes("korea") || text.includes("coree")) return { x: 82, y: 36 };
     if (text.includes("china") || text.includes("chine")) return { x: 78, y: 38 };
-    if (text.includes("nepal")) return { x: 67, y: 39 }; // Bagh Chal (Népal - remonté sur la terre)
-    if (text.includes("india") || text.includes("inde") || text.includes("sri lanka")) return { x: 65, y: 46 }; // Carrom, Échecs
-    if (text.includes("madagascar")) return { x: 62, y: 65 }; // Fanorona (Madagascar - centré sur l'île)
+    if (text.includes("nepal")) return { x: 68, y: 38 }; // Bagh Chal
+    if (text.includes("india") || text.includes("inde") || text.includes("sri lanka")) return { x: 70, y: 46 }; // Carrom / Échecs (Décalé vers la droite, sur le continent indien)
+    if (text.includes("madagascar")) return { x: 62, y: 65 }; // Fanorona
     if (text.includes("scandinavie") || text.includes("viking") || text.includes("scandinavia")) return { x: 50, y: 19 }; // Hnefatafl
     if (text.includes("france")) return { x: 48, y: 26 }; // Dames
     if (text.includes("al-andalus") || text.includes("espagne") || text.includes("spain")) return { x: 45, y: 31 }; // Alquerque
-    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 57, y: 35 }; // Jeu Royal d'Ur (Mésopotamie)
-    if (text.includes("iran") || text.includes("perse")) return { x: 60, y: 35 }; // Backgammon (remonté sur les terres iraniens)
+    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 58, y: 35 }; // Jeu Royal d'Ur
+    if (text.includes("iran") || text.includes("perse")) return { x: 61, y: 35 }; // Backgammon
     if (text.includes("egypt") || text.includes("egypte")) return { x: 55, y: 36 };
     if (text.includes("greece") || text.includes("grece") || text.includes("italy") || text.includes("italie")) return { x: 51, y: 28 };
 
     // 2. Régions Afrique
-    if (text.includes("ouest") && text.includes("afriq")) return { x: 44, y: 44 }; // Awalé (Afrique de l'Ouest)
-    if (text.includes("est") && text.includes("afriq")) return { x: 58, y: 50 }; // Mancala (Afrique de l'Est - Kenya/Éthiopie)
-    if (text.includes("nord") && text.includes("afriq")) return { x: 48, y: 34 }; // Maghreb
-    if (text.includes("sud") && text.includes("afriq")) return { x: 53, y: 68 }; // Afrique du Sud
+    if (text.includes("ouest") && text.includes("afriq")) return { x: 47, y: 44 }; // Awalé (Décalé un peu vers l'est pour rentrer dans le continent)
+    if (text.includes("est") && text.includes("afriq")) return { x: 58, y: 50 }; // Mancala
+    if (text.includes("nord") && text.includes("afriq")) return { x: 48, y: 34 };
+    if (text.includes("sud") && text.includes("afriq")) return { x: 53, y: 68 };
     if (text.includes("sub-saharan") || text.includes("subsaharienne")) return { x: 52, y: 52 };
     if (text.includes("afrique") || text.includes("africa")) return { x: 52, y: 50 };
 
     // 3. Autres Régions du monde
     if (text.includes("moyen-orient") || text.includes("middle east") || text.includes("arab")) return { x: 57, y: 36 };
     if (text.includes("asie de l'est") || text.includes("east asia")) return { x: 79, y: 38 };
-    if (text.includes("asie du sud") || text.includes("south asia")) return { x: 66, y: 44 };
+    if (text.includes("asie du sud") || text.includes("south asia")) return { x: 70, y: 44 };
     if (text.includes("sud-est") || text.includes("southeast")) return { x: 75, y: 48 };
     if (text.includes("asie") || text.includes("asia")) return { x: 72, y: 35 };
 
@@ -477,7 +477,6 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
 
     return { x: 50, y: 42 };
   };
-
   // Dispersion resserrée
   const processedGames = useMemo(() => {
     const mapGroups = {};
