@@ -416,6 +416,7 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
+
 function WorldMap({ games = [], onSelectGame, onOpen }) {
   const { t } = useTranslation();
   const [hoveredGame, setHoveredGame] = useState(null);
@@ -439,31 +440,37 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     const country = normalizeStr(game.country);
     const text = `${region} ${country}`;
 
-    // 1. Pays spécifiques
+    // 1. Pays & Lieux très spécifiques (À vérifier EN PREMIER)
     if (text.includes("japan") || text.includes("japon")) return { x: 86, y: 35 };
-    if (text.includes("china") || text.includes("chine")) return { x: 78, y: 38 };
     if (text.includes("korea") || text.includes("coree")) return { x: 82, y: 36 };
-    if (text.includes("india") || text.includes("inde")) return { x: 70, y: 46 };
+    if (text.includes("china") || text.includes("chine")) return { x: 78, y: 38 };
+    if (text.includes("nepal")) return { x: 73, y: 42 }; // Bagh Chal (Népal)
+    if (text.includes("india") || text.includes("inde") || text.includes("sri lanka")) return { x: 70, y: 47 }; // Carrom, Échecs
+    if (text.includes("madagascar")) return { x: 61, y: 68 }; // Fanorona (Madagascar)
+    if (text.includes("scandinavie") || text.includes("viking") || text.includes("britanniques")) return { x: 49, y: 20 }; // Hnefatafl
+    if (text.includes("france")) return { x: 48, y: 26 }; // Dames
+    if (text.includes("al-andalus")) return { x: 46, y: 31 }; // Alquerque (Espagne/Andalousie)
+    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 62, y: 38 }; // Jeu Royal d'Ur
+    if (text.includes("iran") || text.includes("perse")) return { x: 64, y: 37 }; // Backgammon / Shatranj
     if (text.includes("egypt") || text.includes("egypte")) return { x: 56, y: 38 };
-    if (text.includes("france")) return { x: 48, y: 26 };
     if (text.includes("greece") || text.includes("grece") || text.includes("italy") || text.includes("italie")) return { x: 52, y: 30 };
 
-    // 2. Régions Afrique (Correction Mancala & Afrique de l'Est)
-    if (text.includes("est") && text.includes("afriq")) return { x: 62, y: 52 }; // Afrique de l'Est (Kenya/Éthiopie)
-    if (text.includes("nord") && text.includes("afriq")) return { x: 50, y: 38 }; // Afrique du Nord / Maghreb
-    if (text.includes("ouest") && text.includes("afriq")) return { x: 45, y: 48 }; // Afrique de l'Ouest
+    // 2. Régions Afrique
+    if (text.includes("ouest") && text.includes("afriq")) return { x: 45, y: 48 }; // Awalé (Afrique de l'Ouest)
+    if (text.includes("est") && text.includes("afriq")) return { x: 60, y: 53 }; // Mancala (Afrique de l'Est)
+    if (text.includes("nord") && text.includes("afriq")) return { x: 50, y: 36 }; // Afrique du Nord / Maghreb
     if (text.includes("sud") && text.includes("afriq")) return { x: 54, y: 72 }; // Afrique du Sud
     if (text.includes("sub-saharan") || text.includes("subsaharienne")) return { x: 53, y: 56 };
-    if (text.includes("afrique") || text.includes("africa")) return { x: 54, y: 54 }; // Afrique Centrale
+    if (text.includes("afrique") || text.includes("africa")) return { x: 52, y: 52 }; // Afrique Centrale générique
 
     // 3. Autres Régions du monde
     if (text.includes("moyen-orient") || text.includes("middle east") || text.includes("arab")) return { x: 60, y: 40 };
     if (text.includes("asie de l'est") || text.includes("east asia")) return { x: 80, y: 38 };
     if (text.includes("asie du sud") || text.includes("south asia")) return { x: 71, y: 45 };
     if (text.includes("sud-est") || text.includes("southeast")) return { x: 78, y: 50 };
-    if (text.includes("asie") || text.includes("asia")) return { x: 76, y: 40 };
+    if (text.includes("asie") || text.includes("asia")) return { x: 74, y: 38 };
 
-    if (text.includes("europe")) return { x: 50, y: 26 };
+    if (text.includes("europe")) return { x: 50, y: 24 };
     if (text.includes("amerique du nord") || text.includes("north america")) return { x: 22, y: 32 };
     if (text.includes("amerique du sud") || text.includes("south america")) return { x: 30, y: 65 };
     if (text.includes("oceanie") || text.includes("oceania")) return { x: 86, y: 72 };
@@ -507,10 +514,10 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
 
   const getRegionColor = (regionStr = "", countryStr = "") => {
     const text = normalizeStr(regionStr + " " + countryStr);
-    if (text.includes("africa") || text.includes("afrique") || text.includes("arab") || text.includes("egypt")) return "#e69c55"; // Orange
-    if (text.includes("europe") || text.includes("greece") || text.includes("rome")) return "#82b366"; // Vert
+    if (text.includes("africa") || text.includes("afrique") || text.includes("arab") || text.includes("egypt") || text.includes("madagascar")) return "#e69c55"; // Orange
+    if (text.includes("europe") || text.includes("greece") || text.includes("rome") || text.includes("scandinavie")) return "#82b366"; // Vert
     if (text.includes("america") || text.includes("amerique")) return "#9673a6"; // Violet
-    if (text.includes("asia") || text.includes("asie") || text.includes("japan") || text.includes("china") || text.includes("india")) return "#4ba3e3"; // Bleu Asie
+    if (text.includes("asia") || text.includes("asie") || text.includes("japan") || text.includes("china") || text.includes("india") || text.includes("nepal")) return "#4ba3e3"; // Bleu Asie
     return "#36b3a0"; // Turquoise
   };
 
@@ -623,7 +630,6 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
-
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
