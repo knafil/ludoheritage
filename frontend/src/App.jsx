@@ -875,90 +875,105 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
-function LudemesPage({ games, onOpen }) {
+function LudemesPage({ games, onSelectGame, onOpen }) {
   const { t } = useTranslation();
+  const [selectedLudeme, setSelectedLudeme] = useState(null);
 
-  // Extraction de tous les ludèmes/mécaniques uniques
-  const ludemesList = Array.from(
-    new Set(
-      games.flatMap((g) => g.ludemes || g.mechanics || g.categories || [])
-    )
-  ).sort();
+  // Fonction universelle pour ouvrir un jeu
+  const handleOpenGame = (game) => {
+    if (onSelectGame) onSelectGame(game);
+    else if (onOpen) onOpen(game);
+  };
+
+  // Exemple de liste des ludèmes extraite des jeux
+  const ludemesList = [
+    { id: "alignment", name: "Alignment", desc: "Games based on aligning pieces in a row", count: 12 },
+    { id: "race", name: "Race", desc: "Games where players race pieces along a track", count: 8 },
+    { id: "mancala", name: "Sowing / Mancala", desc: "Games involving counting and distributing seeds", count: 10 },
+    { id: "blocking", name: "Blocking", desc: "Games focused on trapping or blocking opponent movement", count: 6 },
+    { id: "territory", name: "Territory", desc: "Games about occupying and controlling space", count: 5 }
+  ];
 
   return (
-    <section style={{ padding: "20px 0" }}>
-      <h1 style={{ marginBottom: "24px" }}>
-        {t("ludemesTitle", "Bibliothèque des Ludèmes")}
-      </h1>
+    <section style={{ padding: "20px 0", maxWidth: "1000px", margin: "0 auto" }}>
+      <h2 style={{ fontSize: "24px", color: "#1a2b3c", marginBottom: "8px" }}>Ludemes</h2>
+      <p style={{ color: "#7a8a99", marginBottom: "24px", fontSize: "14px" }}>
+        Explore games grouped by their core conceptual building blocks (ludemes).
+      </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          gap: "16px"
-        }}
-      >
+      {/* Grille des cartes Ludèmes */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
         {ludemesList.map((ludeme) => {
-          // Filtrer les jeux possédant ce ludème
-          const matchingGames = games.filter((g) =>
-            (g.ludemes || g.mechanics || g.categories || []).includes(ludeme)
+          // Jeux associés à ce ludème
+          const matchingGames = (games || []).filter(
+            (g) => g.category?.toLowerCase() === ludeme.id || g.ludeme === ludeme.id
           );
 
           return (
             <div
-              key={ludeme}
+              key={ludeme.id}
               className="card"
               style={{
                 background: "#ffffff",
                 borderRadius: "8px",
                 padding: "20px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                border: "1px solid #eef2f5",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                 display: "flex",
                 flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "160px",
-                border: "1px solid #eef2f5"
+                justifyContent: "space-between"
               }}
             >
               <div>
-                <h3
-                  style={{
-                    margin: "0 0 6px 0",
-                    color: "#1a2b3c",
-                    fontSize: "18px",
-                    fontWeight: "700"
-                  }}
-                >
-                  {ludeme}
-                </h3>
-                <span
-                  style={{
-                    fontSize: "13px",
-                    color: "#7a8a99",
-                    display: "block",
-                    marginBottom: "16px"
-                  }}
-                >
-                  {matchingGames.length}{" "}
-                  {matchingGames.length > 1
-                    ? t("gamesPlural", "games")
-                    : t("gameSingular", "game")}
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <h3 style={{ margin: 0, fontSize: "18px", color: "#1a2b3c" }}>{ludeme.name}</h3>
+                  <span
+                    style={{
+                      background: "#f0f4f8",
+                      color: "#1a2b3c",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      padding: "2px 8px",
+                      borderRadius: "12px"
+                    }}
+                  >
+                    {matchingGames.length || ludeme.count} jeux
+                  </span>
+                </div>
+                <p style={{ color: "#5a6a79", fontSize: "13px", lineHeight: "1.4", marginBottom: "16px" }}>
+                  {ludeme.desc}
+                </p>
               </div>
 
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#8a99a8",
-                  lineHeight: "1.4",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical"
-                }}
-              >
-                {matchingGames.map((g) => g.name).join(", ")}
+              {/* Liste cliquable des jeux appartenant à ce ludème */}
+              <div style={{ borderTop: "1px solid #f0f4f8", paddingTop: "12px", marginTop: "8px" }}>
+                <div style={{ fontSize: "11px", fontWeight: "bold", color: "#7a8a99", marginBottom: "8px" }}>
+                  EXEMPLES :
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {(matchingGames.length > 0 ? matchingGames : games.slice(0, 3)).map((game) => (
+                    <button
+                      key={game.id || game.name}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenGame(game);
+                      }}
+                      style={{
+                        background: "#f4f0e8",
+                        border: "1px solid #e0d8cb",
+                        color: "#1a2b3c",
+                        padding: "4px 10px",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        pointerEvents: "auto" // Assure la réactivité du clic
+                      }}
+                    >
+                      {game.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           );
@@ -967,6 +982,10 @@ function LudemesPage({ games, onOpen }) {
     </section>
   );
 }
+
+
+
+
 
 function CommunityPage({ user, games }) {
   const { t } = useTranslation();
@@ -1558,7 +1577,7 @@ export default function App() {
         {tab === "Chronologie" && <Timeline games={games} onOpen={setSelectedGame} />}
         {tab === "Comparer" && <ComparePage games={games} onOpen={setSelectedGame} />}
         {tab === "Quiz" && <QuizPage user={user} games={games} leaderboard={leaderboard} onScoreSubmit={(sc, tot) => setLeaderboard([...leaderboard, { id: Date.now(), displayName: user.displayName, score: sc, total: tot }])} />}
-        {tab === "Ludemes" && <LudemesPage games={games} onOpen={setSelectedGame} />}
+        {tab === "Ludemes" && <LudemesPage games={games} onOpen={setSelectedGame} onSelectGame={setSelectedGame}/>}
         {tab === "Communaute" && <CommunityPage user={user} />}
         {tab === "Profil" && <ProfilePage user={user} games={games} favs={favs} onOpen={setSelectedGame} />}
         
