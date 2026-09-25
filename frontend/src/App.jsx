@@ -416,8 +416,6 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 function WorldMap({ games = [], onOpen }) {
   const { t } = useTranslation();
