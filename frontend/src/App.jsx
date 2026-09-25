@@ -425,76 +425,91 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     else if (onOpen) onOpen(game);
   };
 
-  // Calcul précis des positions (%) sur l'image de la carte du monde
-  const getCoordinates = (game) => {
-    // 1. Si le jeu contient des coordonnées Lat/Lng réelles
+  // Coordonnées ajustées visuellement sur la carte SVG du fond (%)
+  const getCoordinatesForGame = (game) => {
+    // Si coordonnées lat/lng numériques valides
     if (typeof game.lat === "number" && typeof game.lng === "number") {
       const x = ((game.lng + 180) * 100) / 360;
-      // Correction de la projection Mercator pour la hauteur (Y)
-      const latRad = (game.lat * Math.PI) / 180;
-      const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
-      const y = 50 - (mercN * 100) / (2 * Math.PI);
-      return {
-        x: Math.min(Math.max(x, 5), 95),
-        y: Math.min(Math.max(y, 10), 90)
-      };
+      const y = 50 - (game.lat * 100) / 180;
+      return { x, y };
     }
 
-    // 2. Dictionnaire complet des régions et continents (fallback)
     const region = (game.region || game.origin || game.country || "").toLowerCase();
 
-    let base = { x: 50, y: 50 }; // Centre par défaut
+    // Emplacements précis sur le SVG
+    if (region.includes("china") || region.includes("chine")) return { x: 79, y: 38 };
+    if (region.includes("japan") || region.includes("japon")) return { x: 86, y: 36 };
+    if (region.includes("korea") || region.includes("corée")) return { x: 82, y: 36 };
+    if (region.includes("india") || region.includes("inde")) return { x: 70, y: 46 };
+    if (region.includes("southeast") || region.includes("asia")) return { x: 76, y: 44 };
+    
+    if (region.includes("middle east") || region.includes("moyen-orient") || region.includes("persia") || region.includes("iraq")) return { x: 61, y: 38 };
+    if (region.includes("egypt") || region.includes("égypte") || region.includes("north africa")) return { x: 55, y: 38 };
+    if (region.includes("west africa") || region.includes("senegal") || region.includes("mali") || region.includes("ghana")) return { x: 45, y: 48 };
+    if (region.includes("sub-saharan") || region.includes("africa") || region.includes("afrique")) return { x: 52, y: 56 };
 
-    if (region.includes("east asia") || region.includes("china") || region.includes("chine") || region.includes("japan") || region.includes("korea") || region.includes("asiet")) {
-      base = { x: 80, y: 38 }; // Asie de l'Est / Chine / Japon
-    } else if (region.includes("south asia") || region.includes("india") || region.includes("inde")) {
-      base = { x: 70, y: 46 }; // Inde / Asie du Sud
-    } else if (region.includes("asia") || region.includes("asie")) {
-      base = { x: 76, y: 40 }; // Asie générale
-    } else if (region.includes("middle east") || region.includes("moyen-orient") || region.includes("arab") || region.includes("andalus") || region.includes("persia")) {
-      base = { x: 58, y: 40 }; // Moyen-Orient / Monde Arabe
-    } else if (region.includes("north africa") || region.includes("egypte") || region.includes("egypt")) {
-      base = { x: 52, y: 38 }; // Afrique du Nord
-    } else if (region.includes("sub-saharan") || region.includes("africa") || region.includes("afrique")) {
-      base = { x: 50, y: 56 }; // Afrique subsaharienne
-    } else if (region.includes("north america") || region.includes("usa") || region.includes("canada")) {
-      base = { x: 22, y: 32 }; // Amérique du Nord
-    } else if (region.includes("south america") || region.includes("latin") || region.includes("americas") || region.includes("amerique")) {
-      base = { x: 30, y: 65 }; // Amérique du Sud
-    } else if (region.includes("europe")) {
-      base = { x: 50, y: 28 }; // Europe
-    } else if (region.includes("oceania") || region.includes("australia") || region.includes("zealand")) {
-      base = { x: 86, y: 72 }; // Océanie
-    }
+    if (region.includes("greece") || region.includes("grèce") || region.includes("rome") || region.includes("italy")) return { x: 52, y: 31 };
+    if (region.includes("europe") || region.includes("france") || region.includes("spain")) return { x: 48, y: 26 };
+    if (region.includes("scandinavia") || region.includes("vikings")) return { x: 50, y: 18 };
 
-    // Dispersion légère pour que les jeux d'une même région ne se superposent pas
-    const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const offsetX = ((hash % 9) - 4) * 1.8;
-    const offsetY = (((hash >> 2) % 9) - 4) * 1.8;
+    if (region.includes("north america") || region.includes("usa")) return { x: 22, y: 30 };
+    if (region.includes("south america") || region.includes("maya") || region.includes("incan")) return { x: 30, y: 62 };
 
-    return { x: base.x + offsetX, y: base.y + offsetY };
+    // Fallback central
+    return { x: 50, y: 40 };
   };
 
-  // Couleurs par grand continent/région
+  // Traitement pour étaler les jeux superposés et afficher l'intégralité des 20 jeux
+  const processedGames = useMemo(() => {
+    const coordsCount = {};
+
+    return games.map((game, index) => {
+      const base = getCoordinatesForGame(game);
+      const key = `${Math.round(base.x)}_${Math.round(base.y)}`;
+
+      if (!coordsCount[key]) {
+        coordsCount[key] = 0;
+      }
+      
+      const count = coordsCount[key];
+      coordsCount[key] += 1;
+
+      // Si plusieurs jeux partagent le même emplacement, on les écarte en cercle
+      if (count > 0) {
+        const angle = (count * 2 * Math.PI) / 5;
+        const radius = 2.8; // Écartement en %
+        return {
+          ...game,
+          mapX: base.x + Math.cos(angle) * radius,
+          mapY: base.y + Math.sin(angle) * radius
+        };
+      }
+
+      return {
+        ...game,
+        mapX: base.x,
+        mapY: base.y
+      };
+    });
+  }, [games]);
+
   const getRegionColor = (regionStr = "") => {
     const reg = regionStr.toLowerCase();
-    if (reg.includes("africa") || reg.includes("afrique") || reg.includes("arab") || reg.includes("moyen")) {
-      return "#e69c55"; // Orange / Terre
-    }
-    if (reg.includes("europe")) {
-      return "#82b366"; // Vert
-    }
-    if (reg.includes("america") || reg.includes("amérique")) {
-      return "#9673a6"; // Violet
-    }
-    if (reg.includes("asia") || reg.includes("asie") || reg.includes("japan") || reg.includes("china") || reg.includes("india")) {
-      return "#4ba3e3"; // Bleu Asie
-    }
-    return "#6c8ebf"; // Bleu par défaut
+    if (reg.includes("africa") || reg.includes("afrique") || reg.includes("arab") || reg.includes("egypt")) return "#e69c55"; // Orange
+    if (reg.includes("europe") || reg.includes("rome") || reg.includes("greece")) return "#82b366"; // Vert
+    if (reg.includes("america") || reg.includes("amérique")) return "#9673a6"; // Violet
+    if (reg.includes("asia") || reg.includes("asie") || reg.includes("japan") || reg.includes("china") || reg.includes("india")) return "#4ba3e3"; // Bleu
+    return "#36b3a0"; // Turquoise
   };
 
   return (
     <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+        <span style={{ fontSize: "14px", color: "#7a8a99", fontWeight: "600" }}>
+          Affichage sur la carte : <strong style={{ color: "#1a2b3c" }}>{processedGames.length} jeux</strong>
+        </span>
+      </div>
+
       <div
         style={{
           position: "relative",
@@ -522,8 +537,7 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
         />
 
         {/* Repères des jeux */}
-        {games.map((game) => {
-          const { x, y } = getCoordinates(game);
+        {processedGames.map((game) => {
           const color = getRegionColor(game.region || game.origin);
           const isHovered = hoveredGame?.name === game.name;
 
@@ -538,8 +552,8 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
               onMouseLeave={() => setHoveredGame(null)}
               style={{
                 position: "absolute",
-                left: `${x}%`,
-                top: `${y}%`,
+                left: `${game.mapX}%`,
+                top: `${game.mapY}%`,
                 transform: "translate(-50%, -50%)",
                 cursor: "pointer",
                 padding: "8px",
@@ -637,6 +651,8 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
+
+
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
