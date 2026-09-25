@@ -416,7 +416,7 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
-function WorldMap({ games, onSelectGame, onOpen }) {
+function WorldMap({ games = [], onSelectGame, onOpen }) {
   const { t } = useTranslation();
   const [hoveredGame, setHoveredGame] = useState(null);
 
@@ -425,50 +425,72 @@ function WorldMap({ games, onSelectGame, onOpen }) {
     else if (onOpen) onOpen(game);
   };
 
-  // Convertit Lat/Lng réels ou région vers la position exacte (%) sur la carte Mercator
+  // Calcul précis des positions (%) sur l'image de la carte du monde
   const getCoordinates = (game) => {
-    if (game.lat !== undefined && game.lng !== undefined) {
+    // 1. Si le jeu contient des coordonnées Lat/Lng réelles
+    if (typeof game.lat === "number" && typeof game.lng === "number") {
       const x = ((game.lng + 180) * 100) / 360;
-      // Projection Mercator approximée pour centrer correctement les latitudes
-      const y = ((90 - game.lat) * 100) / 180;
-      return { x, y };
+      // Correction de la projection Mercator pour la hauteur (Y)
+      const latRad = (game.lat * Math.PI) / 180;
+      const mercN = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
+      const y = 50 - (mercN * 100) / (2 * Math.PI);
+      return {
+        x: Math.min(Math.max(x, 5), 95),
+        y: Math.min(Math.max(y, 10), 90)
+      };
     }
 
-    const regionCoords = {
-      "Europe": { x: 50, y: 28 },
-      "Arab World / Al-Andalus": { x: 52, y: 38 },
-      "North Africa": { x: 48, y: 40 },
-      "Sub-Saharan Africa": { x: 52, y: 58 },
-      "East Asia": { x: 80, y: 38 },
-      "South Asia": { x: 70, y: 46 },
-      "Americas": { x: 26, y: 42 },
-      "Oceania": { x: 86, y: 72 }
-    };
+    // 2. Dictionnaire complet des régions et continents (fallback)
+    const region = (game.region || game.origin || game.country || "").toLowerCase();
 
-    const base = regionCoords[game.region] || { x: 50, y: 50 };
+    let base = { x: 50, y: 50 }; // Centre par défaut
+
+    if (region.includes("east asia") || region.includes("china") || region.includes("chine") || region.includes("japan") || region.includes("korea") || region.includes("asiet")) {
+      base = { x: 80, y: 38 }; // Asie de l'Est / Chine / Japon
+    } else if (region.includes("south asia") || region.includes("india") || region.includes("inde")) {
+      base = { x: 70, y: 46 }; // Inde / Asie du Sud
+    } else if (region.includes("asia") || region.includes("asie")) {
+      base = { x: 76, y: 40 }; // Asie générale
+    } else if (region.includes("middle east") || region.includes("moyen-orient") || region.includes("arab") || region.includes("andalus") || region.includes("persia")) {
+      base = { x: 58, y: 40 }; // Moyen-Orient / Monde Arabe
+    } else if (region.includes("north africa") || region.includes("egypte") || region.includes("egypt")) {
+      base = { x: 52, y: 38 }; // Afrique du Nord
+    } else if (region.includes("sub-saharan") || region.includes("africa") || region.includes("afrique")) {
+      base = { x: 50, y: 56 }; // Afrique subsaharienne
+    } else if (region.includes("north america") || region.includes("usa") || region.includes("canada")) {
+      base = { x: 22, y: 32 }; // Amérique du Nord
+    } else if (region.includes("south america") || region.includes("latin") || region.includes("americas") || region.includes("amerique")) {
+      base = { x: 30, y: 65 }; // Amérique du Sud
+    } else if (region.includes("europe")) {
+      base = { x: 50, y: 28 }; // Europe
+    } else if (region.includes("oceania") || region.includes("australia") || region.includes("zealand")) {
+      base = { x: 86, y: 72 }; // Océanie
+    }
+
+    // Dispersion légère pour que les jeux d'une même région ne se superposent pas
     const hash = (game.name || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const offsetX = ((hash % 9) - 4) * 1.5;
-    const offsetY = (((hash >> 2) % 9) - 4) * 1.5;
+    const offsetX = ((hash % 9) - 4) * 1.8;
+    const offsetY = (((hash >> 2) % 9) - 4) * 1.8;
 
     return { x: base.x + offsetX, y: base.y + offsetY };
   };
 
-  const getRegionColor = (region) => {
-    switch (region) {
-      case "Sub-Saharan Africa":
-      case "North Africa":
-      case "Arab World / Al-Andalus":
-        return "#e69c55"; // Orange / Ochre
-      case "Europe":
-        return "#82b366"; // Vert
-      case "Americas":
-        return "#9673a6"; // Violet
-      case "East Asia":
-      case "South Asia":
-      case "Oceania":
-      default:
-        return "#6c8ebf"; // Bleu
+  // Couleurs par grand continent/région
+  const getRegionColor = (regionStr = "") => {
+    const reg = regionStr.toLowerCase();
+    if (reg.includes("africa") || reg.includes("afrique") || reg.includes("arab") || reg.includes("moyen")) {
+      return "#e69c55"; // Orange / Terre
     }
+    if (reg.includes("europe")) {
+      return "#82b366"; // Vert
+    }
+    if (reg.includes("america") || reg.includes("amérique")) {
+      return "#9673a6"; // Violet
+    }
+    if (reg.includes("asia") || reg.includes("asie") || reg.includes("japan") || reg.includes("china") || reg.includes("india")) {
+      return "#4ba3e3"; // Bleu Asie
+    }
+    return "#6c8ebf"; // Bleu par défaut
   };
 
   return (
@@ -478,14 +500,14 @@ function WorldMap({ games, onSelectGame, onOpen }) {
           position: "relative",
           width: "100%",
           height: "580px",
-          backgroundColor: "#071624", // Couleur fond océan sombre d'origine
+          backgroundColor: "#071624",
           borderRadius: "8px",
           overflow: "hidden",
           border: "1px solid #1a2b3c",
           boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
         }}
       >
-        {/* Vraie silhouette World Map géographique */}
+        {/* Silhouette de la Carte du Monde */}
         <div
           style={{
             position: "absolute",
@@ -499,10 +521,10 @@ function WorldMap({ games, onSelectGame, onOpen }) {
           }}
         />
 
-        {/* Repères des jeux sur le monde */}
-        {(games || []).map((game) => {
+        {/* Repères des jeux */}
+        {games.map((game) => {
           const { x, y } = getCoordinates(game);
-          const color = getRegionColor(game.region);
+          const color = getRegionColor(game.region || game.origin);
           const isHovered = hoveredGame?.name === game.name;
 
           return (
@@ -524,7 +546,6 @@ function WorldMap({ games, onSelectGame, onOpen }) {
                 zIndex: isHovered ? 100 : 20
               }}
             >
-              {/* Cercle réactif */}
               <div
                 style={{
                   width: "18px",
@@ -572,7 +593,7 @@ function WorldMap({ games, onSelectGame, onOpen }) {
                     {game.name}
                   </h4>
                   <p style={{ margin: "0 0 8px 0", color: "#7a8a99", fontSize: "11px" }}>
-                    {game.region || "Traditionnel"}
+                    {game.region || game.origin || "Traditionnel"}
                   </p>
 
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
@@ -616,7 +637,6 @@ function WorldMap({ games, onSelectGame, onOpen }) {
     </section>
   );
 }
-
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
