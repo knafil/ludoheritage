@@ -828,13 +828,6 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 }
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
-function LudemesPage({ games = [], onSelectGame, onOpen }) {
-  const { t } = useTranslation();
-
-  const handleOpenGame = (game) => {
-    if (onSelectGame) onSelectGame(game);
-    else if (onOpen) onOpen(game);
-  };
 
   // Liste des ludèmes avec mots-clés de recherche associés
   const ludemesList = [
