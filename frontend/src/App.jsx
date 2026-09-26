@@ -450,9 +450,10 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     if (text.includes("scandinavie") || text.includes("viking") || text.includes("scandinavia")) return { x: 50, y: 19 }; // Hnefatafl
     if (text.includes("france")) return { x: 48, y: 26 }; // Dames
     if (text.includes("al-andalus") || text.includes("espagne") || text.includes("spain")) return { x: 45, y: 31 }; // Alquerque
-    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 58, y: 35 }; // Jeu Royal d'Ur
+    // Ajustements Proche-Orient / Mésopotamie
+    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 59, y: 39 }; // Jeu Royal d'Ur (remonté un peu plus bas, au sud de la Mer Noire)
+    if (text.includes("egypt") || text.includes("egypte")) return { x: 55, y: 40 }; // Égypte (descendu sur les terres égyptiennes)
     if (text.includes("iran") || text.includes("perse")) return { x: 61, y: 35 }; // Backgammon
-    if (text.includes("egypt") || text.includes("egypte")) return { x: 55, y: 36 };
     if (text.includes("greece") || text.includes("grece") || text.includes("italy") || text.includes("italie")) return { x: 51, y: 28 };
 
     // 2. Régions Afrique
