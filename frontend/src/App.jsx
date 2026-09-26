@@ -513,11 +513,12 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
           maxZoom={8}
           style={{ width: "100%", height: "100%", backgroundColor: "#071624" }}
         >
-        <TileLayer
-  attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-/>
-          {games.map((game) => {
+         <TileLayer
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  url="https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+/>         
+ 
+         {games.map((game) => {
             const coords = getCoordinates(game);
             const color = getRegionColor(game.region, game.country);
 
