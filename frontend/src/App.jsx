@@ -1206,241 +1206,188 @@ function CommunityPage({ user, games }) {
     </section>
   );
 }
+//-----------Profile Page---------------------------
+import React, { useState } from "react";
 
-function ProfilePage({ user, games, favs, onOpen }) {
-  const { t, i18n } = useTranslation();
-  const favGames = games.filter((g) => favs.includes(g.id));
+function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
+  const [activeTab, setActiveTab] = useState("favorites");
 
-  // Données fictives/dynamiques pour correspondre à l'interface originale
+  const userData = user || {
+    name: "Joueur Passionné",
+    email: "joueur@example.com",
+    avatar: "🎮"
+  };
+
   const achievements = [
-    { title: "First step", desc: "Open your first game", icon: "◆", unlocked: true },
-    { title: "Explorer", desc: "View 5 games", icon: "◎", unlocked: true },
-    { title: "Scholar", desc: "View 10 games", icon: "◈", unlocked: false },
-    { title: "First favorite", desc: "Add 1 game to favorites", icon: "♥", unlocked: false },
-    { title: "Collector", desc: "5 games in favorites", icon: "★", unlocked: false },
-    { title: "Globetrotter", desc: "Explore 3 regions", icon: "●", unlocked: true }
+    { id: 1, title: "Premier Pas", desc: "A consulté 5 jeux différents", unlocked: true },
+    { id: 2, title: "Collectionneur", desc: "A ajouté 5 jeux en favoris", unlocked: favorites.length >= 5 },
+    { id: 3, title: "Ludologue", desc: "A exploré les 8 ludèmes", unlocked: true }
   ];
 
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
-
   return (
-    <section style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px 0" }}>
-      {/* 1. Bandeau supérieur : Game of the Day + Stats */}
+    <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px 0" }}>
+      {/* ─── EN-TÊTE DU PROFIL ────────────────────────────────────── */}
       <div
-        className="card"
         style={{
-          background: "#f7f5f0",
-          borderRadius: "8px",
+          background: "#ffffff",
+          borderRadius: "12px",
           padding: "24px",
-          marginBottom: "24px",
+          border: "1px solid #eef2f5",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          border: "1px solid #eae6df"
+          marginBottom: "24px"
         }}
       >
-        <div style={{ maxWidth: "60%" }}>
-          <span style={{ fontSize: "11px", fontWeight: "bold", color: "#7a8a99", letterSpacing: "1px" }}>
-            {t("gameOfDay", "GAME OF THE DAY")}
-          </span>
-          <h2 style={{ margin: "8px 0", fontSize: "32px", color: "#1a2b3c" }}>Mu Torere</h2>
-          <p style={{ color: "#5a6a79", fontSize: "14px", lineHeight: "1.4", marginBottom: "16px" }}>
-            The only traditional board game of the Māori people — played on an eight-pointed star with a central hub.
-          </p>
-          <button
-            onClick={() => onOpen && onOpen(games.find((g) => g.name === "Mu Torere") || games[0])}
-            style={{
-              background: "#1b2a38",
-              color: "#fff",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "4px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "13px"
-            }}
-          >
-            {t("discover", "Discover this game")}
-          </button>
-        </div>
-
-        {/* Blocs de statistiques à droite */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px", minWidth: "180px" }}>
-          {[
-            { count: games.length || 42, label: t("games", "games") },
-            { count: 4, label: t("regions", "regions") },
-            { count: 30, label: t("categories", "categories") },
-            { count: favs.length, label: t("favorites", "favorites") }
-          ].map((stat, idx) => (
-            <div
-              key={idx}
-              style={{
-                background: "#ffffff",
-                padding: "8px 16px",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "baseline",
-                gap: "8px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
-              }}
-            >
-              <strong style={{ fontSize: "18px", color: "#1a2b3c" }}>{stat.count}</strong>
-              <small style={{ color: "#7a8a99", fontSize: "12px" }}>{stat.label}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. Carte d'identité Profil */}
-      <div
-        className="card"
-        style={{
-          background: "#ffffff",
-          borderRadius: "8px",
-          padding: "24px",
-          marginBottom: "28px",
-          border: "1px solid #eef2f5",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start"
-        }}
-      >
-        <div style={{ display: "flex", gap: "20px" }}>
-          {/* Avatar carré bleu/vert */}
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           <div
             style={{
               width: "64px",
               height: "64px",
-              background: "#0e6b85",
+              borderRadius: "50%",
+              background: "#1a2b3c",
               color: "#ffffff",
-              fontSize: "24px",
-              fontWeight: "bold",
-              borderRadius: "4px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              fontSize: "28px"
             }}
           >
-            {(user?.displayName || "C").slice(0, 1).toUpperCase()}
+            {userData.avatar || userData.name.charAt(0).toUpperCase()}
           </div>
-
           <div>
-            <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", color: "#1a2b3c" }}>
-              {user?.displayName || "ClientName"}
-            </h2>
-            <p style={{ margin: "0 0 16px 0", color: "#7a8a99", fontSize: "14px" }}>
-              {user?.email || "clientname@gmail.com"}
-            </p>
-
-            {/* Grille de métriques personnelles */}
-            <div style={{ display: "flex", gap: "8px" }}>
-              {[
-                { label: "FAVORITES", value: favs.length },
-                { label: "VIEWED", value: 7 },
-                { label: "POSTS", value: 0 },
-                { label: "ACHIEVEMENTS", value: unlockedCount }
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: "#f4f0e8",
-                    padding: "8px 16px",
-                    borderRadius: "4px",
-                    textAlign: "center",
-                    minWidth: "75px"
-                  }}
-                >
-                  <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1a2b3c" }}>{item.value}</div>
-                  <div style={{ fontSize: "9px", color: "#7a8a99", fontWeight: "bold", marginTop: "2px" }}>
-                    {item.label}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 style={{ margin: 0, fontSize: "22px", color: "#1a2b3c" }}>{userData.name}</h2>
+            <p style={{ margin: "4px 0 0 0", color: "#7a8a99", fontSize: "14px" }}>{userData.email}</p>
           </div>
         </div>
 
         <button
           style={{
-            background: "#ffffff",
-            border: "1px solid #1a2b3c",
-            color: "#1a2b3c",
             padding: "8px 16px",
-            borderRadius: "4px",
-            fontWeight: "bold",
-            fontSize: "13px",
+            borderRadius: "6px",
+            border: "1px solid #d0d7de",
+            background: "#f6f8fa",
+            color: "#24292f",
+            fontWeight: "600",
             cursor: "pointer"
           }}
         >
-          {t("editPreferences", "Edit preferences")}
+          Éditer le profil
         </button>
       </div>
 
-      {/* 3. Section Preferences */}
-      <div style={{ marginBottom: "28px" }}>
-        <h2 style={{ fontSize: "22px", marginBottom: "16px", color: "#1a2b3c" }}>Preferences</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-          {[
-            { tag: "LEVEL", val: "Amateur" },
-            { tag: "PREFERRED TYPE", val: "Strategy" },
-            { tag: "REGION", val: "Europe" },
-            { tag: "LANGUAGE", val: i18n.language === "fr" ? "French" : "English" }
-          ].map((pref, idx) => (
+      {/* ─── NAVIGATION PAR ONGLETS ──────────────────────────────── */}
+      <div style={{ display: "flex", gap: "12px", borderBottom: "2px solid #eef2f5", marginBottom: "20px" }}>
+        {[
+          { id: "favorites", label: `❤️ Favoris (${favorites.length})` },
+          { id: "history", label: `📜 Historique (${history.length})` },
+          { id: "achievements", label: `🏆 Succès (${achievements.filter(a => a.unlocked).length})` }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "10px 18px",
+              border: "none",
+              background: "none",
+              borderBottom: activeTab === tab.id ? "3px solid #1a2b3c" : "3px solid transparent",
+              color: activeTab === tab.id ? "#1a2b3c" : "#7a8a99",
+              fontWeight: activeTab === tab.id ? "bold" : "normal",
+              cursor: "pointer",
+              fontSize: "14px"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── CONTENU DES ONGLETS ─────────────────────────────────── */}
+      {activeTab === "favorites" && (
+        <div>
+          {favorites.length > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+              {favorites.map((game) => (
+                <div
+                  key={game.id}
+                  onClick={() => onSelectGame && onSelectGame(game)}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #eef2f5",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    cursor: "pointer",
+                    transition: "transform 0.15s ease"
+                  }}
+                >
+                  <h4 style={{ margin: "0 0 6px 0", color: "#1a2b3c" }}>{game.name}</h4>
+                  <span style={{ fontSize: "12px", color: "#7a8a99" }}>{game.category || "Jeu de stratégie"}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Vous n'avez pas encore de jeux mis en favoris.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "history" && (
+        <div>
+          {history.length > 0 ? (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {history.map((game, idx) => (
+                <li
+                  key={idx}
+                  onClick={() => onSelectGame && onSelectGame(game)}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#ffffff",
+                    borderRadius: "6px",
+                    border: "1px solid #eef2f5",
+                    marginBottom: "8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between"
+                  }}
+                >
+                  <span style={{ fontWeight: "600", color: "#1a2b3c" }}>{game.name}</span>
+                  <span style={{ color: "#a0acb8", fontSize: "12px" }}>Consulté récemment</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Aucun historique de consultation.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "achievements" && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+          {achievements.map((item) => (
             <div
-              key={idx}
-              className="card"
+              key={item.id}
               style={{
-                background: "#ffffff",
+                background: item.unlocked ? "#ffffff" : "#f8f9fa",
+                border: "1px solid",
+                borderColor: item.unlocked ? "#cce5ff" : "#eef2f5",
+                borderRadius: "8px",
                 padding: "16px",
-                borderRadius: "6px",
-                border: "1px solid #eef2f5"
+                opacity: item.unlocked ? 1 : 0.6
               }}
             >
-              <div style={{ fontSize: "10px", fontWeight: "bold", color: "#7a8a99", marginBottom: "6px" }}>
-                {pref.tag}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                <span>{item.unlocked ? "🏆" : "🔒"}</span>
+                <h4 style={{ margin: 0, color: "#1a2b3c" }}>{item.title}</h4>
               </div>
-              <div style={{ fontSize: "16px", fontWeight: "bold", color: "#1a2b3c" }}>{pref.val}</div>
+              <p style={{ margin: 0, fontSize: "12px", color: "#7a8a99" }}>{item.desc}</p>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* 4. Section Achievements */}
-      <div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "16px" }}>
-          <h2 style={{ fontSize: "22px", margin: 0, color: "#1a2b3c" }}>Achievements</h2>
-          <span style={{ fontSize: "13px", color: "#7a8a99" }}>
-            {unlockedCount} / {achievements.length} unlocked
-          </span>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "12px" }}>
-          {achievements.map((ach, idx) => (
-            <div
-              key={idx}
-              className="card"
-              style={{
-                background: ach.unlocked ? "#e6f0f2" : "#ffffff",
-                padding: "16px 12px",
-                borderRadius: "6px",
-                border: ach.unlocked ? "1px solid #b3d4dc" : "1px solid #eef2f5",
-                textAlign: "center",
-                opacity: ach.unlocked ? 1 : 0.6
-              }}
-            >
-              <div style={{ fontSize: "20px", marginBottom: "8px", color: "#0e6b85" }}>{ach.icon}</div>
-              <div style={{ fontSize: "13px", fontWeight: "bold", color: "#1a2b3c", marginBottom: "4px" }}>
-                {ach.title}
-              </div>
-              <div style={{ fontSize: "11px", color: "#7a8a99", lineHeight: "1.2" }}>{ach.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }
-
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 
