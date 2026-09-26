@@ -1208,20 +1208,14 @@ function CommunityPage({ user, games }) {
 }
 //-----------Profile Page---------------------------
 
-function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
+
+function ProfilePage({ user = null, favorites = [], history = [], onSelectGame }) {
   const [activeTab, setActiveTab] = useState("favorites");
 
-  const userData = user || {
-    name: "Joueur Passionné",
-    email: "joueur@example.com",
-    avatar: "🎮"
-  };
-
-  const achievements = [
-    { id: 1, title: "Premier Pas", desc: "A consulté 5 jeux différents", unlocked: true },
-    { id: 2, title: "Collectionneur", desc: "A ajouté 5 jeux en favoris", unlocked: favorites.length >= 5 },
-    { id: 3, title: "Ludologue", desc: "A exploré les 8 ludèmes", unlocked: true }
-  ];
+  // Sécurité : Valeurs par défaut si `user` n'est pas encore chargé
+  const profileName = user?.name || user?.username || "Joueur";
+  const profileEmail = user?.email || "Email non renseigné";
+  const userAvatar = profileName.charAt(0).toUpperCase();
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px 0" }}>
@@ -1242,22 +1236,23 @@ function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           <div
             style={{
-              width: "64px",
-              height: "64px",
+              width: "60px",
+              height: "60px",
               borderRadius: "50%",
               background: "#1a2b3c",
               color: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "28px"
+              fontSize: "24px",
+              fontWeight: "bold"
             }}
           >
-            {userData.avatar || userData.name.charAt(0).toUpperCase()}
+            {userAvatar}
           </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: "22px", color: "#1a2b3c" }}>{userData.name}</h2>
-            <p style={{ margin: "4px 0 0 0", color: "#7a8a99", fontSize: "14px" }}>{userData.email}</p>
+            <h2 style={{ margin: 0, fontSize: "22px", color: "#1a2b3c" }}>{profileName}</h2>
+            <p style={{ margin: "4px 0 0 0", color: "#7a8a99", fontSize: "14px" }}>{profileEmail}</p>
           </div>
         </div>
 
@@ -1266,7 +1261,7 @@ function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
             padding: "8px 16px",
             borderRadius: "6px",
             border: "1px solid #d0d7de",
-            background: "#f6f8fa",
+            background: "#ffffff",
             color: "#24292f",
             fontWeight: "600",
             cursor: "pointer"
@@ -1276,12 +1271,11 @@ function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
         </button>
       </div>
 
-      {/* ─── NAVIGATION PAR ONGLETS ──────────────────────────────── */}
+      {/* ─── ONGLETS DE NAVIGATION ────────────────────────────────── */}
       <div style={{ display: "flex", gap: "12px", borderBottom: "2px solid #eef2f5", marginBottom: "20px" }}>
         {[
-          { id: "favorites", label: `❤️ Favoris (${favorites.length})` },
-          { id: "history", label: `📜 Historique (${history.length})` },
-          { id: "achievements", label: `🏆 Succès (${achievements.filter(a => a.unlocked).length})` }
+          { id: "favorites", label: `❤️ Favoris (${Array.isArray(favorites) ? favorites.length : 0})` },
+          { id: "history", label: `📜 Historique (${Array.isArray(history) ? history.length : 0})` }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -1305,38 +1299,37 @@ function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
       {/* ─── CONTENU DES ONGLETS ─────────────────────────────────── */}
       {activeTab === "favorites" && (
         <div>
-          {favorites.length > 0 ? (
+          {Array.isArray(favorites) && favorites.length > 0 ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
-              {favorites.map((game) => (
+              {favorites.map((game, idx) => (
                 <div
-                  key={game.id}
+                  key={game?.id || idx}
                   onClick={() => onSelectGame && onSelectGame(game)}
                   style={{
                     background: "#ffffff",
                     border: "1px solid #eef2f5",
                     borderRadius: "8px",
                     padding: "16px",
-                    cursor: "pointer",
-                    transition: "transform 0.15s ease"
+                    cursor: "pointer"
                   }}
                 >
-                  <h4 style={{ margin: "0 0 6px 0", color: "#1a2b3c" }}>{game.name}</h4>
-                  <span style={{ fontSize: "12px", color: "#7a8a99" }}>{game.category || "Jeu de stratégie"}</span>
+                  <h4 style={{ margin: "0 0 6px 0", color: "#1a2b3c" }}>{game?.name || "Jeu sans nom"}</h4>
+                  <span style={{ fontSize: "12px", color: "#7a8a99" }}>{game?.category || "Jeu de stratégie"}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Vous n'avez pas encore de jeux mis en favoris.</p>
+            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Vous n'avez pas encore de jeux en favoris.</p>
           )}
         </div>
       )}
 
       {activeTab === "history" && (
         <div>
-          {history.length > 0 ? (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          {Array.isArray(history) && history.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {history.map((game, idx) => (
-                <li
+                <div
                   key={idx}
                   onClick={() => onSelectGame && onSelectGame(game)}
                   style={{
@@ -1344,49 +1337,26 @@ function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
                     background: "#ffffff",
                     borderRadius: "6px",
                     border: "1px solid #eef2f5",
-                    marginBottom: "8px",
                     cursor: "pointer",
                     display: "flex",
                     justifyContent: "space-between"
                   }}
                 >
-                  <span style={{ fontWeight: "600", color: "#1a2b3c" }}>{game.name}</span>
+                  <span style={{ fontWeight: "600", color: "#1a2b3c" }}>{game?.name || "Jeu"}</span>
                   <span style={{ color: "#a0acb8", fontSize: "12px" }}>Consulté récemment</span>
-                </li>
+                </div>
               ))}
-            </ul>
-          ) : (
-            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Aucun historique de consultation.</p>
-          )}
-        </div>
-      )}
-
-      {activeTab === "achievements" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-          {achievements.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                background: item.unlocked ? "#ffffff" : "#f8f9fa",
-                border: "1px solid",
-                borderColor: item.unlocked ? "#cce5ff" : "#eef2f5",
-                borderRadius: "8px",
-                padding: "16px",
-                opacity: item.unlocked ? 1 : 0.6
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                <span>{item.unlocked ? "🏆" : "🔒"}</span>
-                <h4 style={{ margin: 0, color: "#1a2b3c" }}>{item.title}</h4>
-              </div>
-              <p style={{ margin: 0, fontSize: "12px", color: "#7a8a99" }}>{item.desc}</p>
             </div>
-          ))}
+          ) : (
+            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Aucun historique récent.</p>
+          )}
         </div>
       )}
     </div>
   );
 }
+
+
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 
