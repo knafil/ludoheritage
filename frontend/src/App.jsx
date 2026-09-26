@@ -1207,7 +1207,6 @@ function CommunityPage({ user, games }) {
   );
 }
 //-----------Profile Page---------------------------
-import React, { useState } from "react";
 
 function ProfilePage({ user, favorites = [], history = [], onSelectGame }) {
   const [activeTab, setActiveTab] = useState("favorites");
