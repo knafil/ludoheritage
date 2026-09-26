@@ -486,16 +486,27 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     }
   };
 
-  const getCoordinates = (game) => {
-    if (game.lat && game.lng) return [game.lat, game.lng];
+// On garde une trace des coordonnées déjà utilisées pour décaler légèrement
+const getCoordinates = (game, index) => {
+  if (game.lat && game.lng) return [game.lat, game.lng];
 
-    const text = `${game.region || ""} ${game.country || ""}`.toLowerCase();
-    for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
-      if (text.includes(key)) return coords;
+  const text = `${game.region || ""} ${game.country || ""}`.toLowerCase();
+  let baseCoords = [20, 0];
+
+  for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
+    if (text.includes(key)) {
+      baseCoords = coords;
+      break;
     }
+  }
 
-    return [20, 0];
-  };
+  // Petit décalage artificiel basatif sur l'index pour éviter la superposition exacte
+  const offsetLat = (index % 3 - 1) * 0.8; 
+  const offsetLng = (Math.floor(index / 3) % 3 - 1) * 0.8;
+
+  return [baseCoords[0] + offsetLat, baseCoords[1] + offsetLng];
+};
+
 
   const getRegionColor = (regionStr = "", countryStr = "") => {
     const text = `${regionStr} ${countryStr}`.toLowerCase();
@@ -521,8 +532,8 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
             maxZoom={16}
           />
-{games.map((game) => {
-  const coords = getCoordinates(game);
+{games.map((game, index) => {
+  const coords = getCoordinates(game, index);
   const color = getRegionColor(game.region, game.country);
 
   return (
