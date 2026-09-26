@@ -1207,15 +1207,24 @@ function CommunityPage({ user, games }) {
   );
 }
 //-----------Profile Page---------------------------
-
-
-function ProfilePage({ user = null, favorites = [], history = [], onSelectGame }) {
+function ProfilePage({ user, games = [], favs = [], onOpen }) {
   const [activeTab, setActiveTab] = useState("favorites");
 
-  // Sécurité : Valeurs par défaut si `user` n'est pas encore chargé
-  const profileName = user?.name || user?.username || "Joueur";
+  // Récupération correcte selon la structure de ton objet user (displayName)
+  const profileName = user?.displayName || user?.name || user?.username || "Joueur";
   const profileEmail = user?.email || "Email non renseigné";
   const userAvatar = profileName.charAt(0).toUpperCase();
+
+  // Filtrage des jeux favoris à partir du tableau d'IDs ou d'objets `favs`
+  const favoriteGames = games.filter((game) => {
+    if (!favs) return false;
+    // Si favs contient des IDs
+    if (typeof favs[0] === "number" || typeof favs[0] === "string") {
+      return favs.includes(game.id) || favs.includes(game.name);
+    }
+    // Si favs contient déjà des objets jeux
+    return favs.some((f) => f.id === game.id || f.name === game.name);
+  });
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px 0" }}>
@@ -1273,48 +1282,43 @@ function ProfilePage({ user = null, favorites = [], history = [], onSelectGame }
 
       {/* ─── ONGLETS DE NAVIGATION ────────────────────────────────── */}
       <div style={{ display: "flex", gap: "12px", borderBottom: "2px solid #eef2f5", marginBottom: "20px" }}>
-        {[
-          { id: "favorites", label: `❤️ Favoris (${Array.isArray(favorites) ? favorites.length : 0})` },
-          { id: "history", label: `📜 Historique (${Array.isArray(history) ? history.length : 0})` }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: "10px 18px",
-              border: "none",
-              background: "none",
-              borderBottom: activeTab === tab.id ? "3px solid #1a2b3c" : "3px solid transparent",
-              color: activeTab === tab.id ? "#1a2b3c" : "#7a8a99",
-              fontWeight: activeTab === tab.id ? "bold" : "normal",
-              cursor: "pointer",
-              fontSize: "14px"
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        <button
+          onClick={() => setActiveTab("favorites")}
+          style={{
+            padding: "10px 18px",
+            border: "none",
+            background: "none",
+            borderBottom: activeTab === "favorites" ? "3px solid #1a2b3c" : "3px solid transparent",
+            color: activeTab === "favorites" ? "#1a2b3c" : "#7a8a99",
+            fontWeight: activeTab === "favorites" ? "bold" : "normal",
+            cursor: "pointer",
+            fontSize: "14px"
+          }}
+        >
+          ❤️ Favoris ({favoriteGames.length})
+        </button>
       </div>
 
-      {/* ─── CONTENU DES ONGLETS ─────────────────────────────────── */}
+      {/* ─── LISTE DES FAVORIS ─────────────────────────────────── */}
       {activeTab === "favorites" && (
         <div>
-          {Array.isArray(favorites) && favorites.length > 0 ? (
+          {favoriteGames.length > 0 ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
-              {favorites.map((game, idx) => (
+              {favoriteGames.map((game) => (
                 <div
-                  key={game?.id || idx}
-                  onClick={() => onSelectGame && onSelectGame(game)}
+                  key={game.id || game.name}
+                  onClick={() => onOpen && onOpen(game)}
                   style={{
                     background: "#ffffff",
                     border: "1px solid #eef2f5",
                     borderRadius: "8px",
                     padding: "16px",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.02)"
                   }}
                 >
-                  <h4 style={{ margin: "0 0 6px 0", color: "#1a2b3c" }}>{game?.name || "Jeu sans nom"}</h4>
-                  <span style={{ fontSize: "12px", color: "#7a8a99" }}>{game?.category || "Jeu de stratégie"}</span>
+                  <h4 style={{ margin: "0 0 6px 0", color: "#1a2b3c" }}>{game.name}</h4>
+                  <span style={{ fontSize: "12px", color: "#7a8a99" }}>{game.category || game.region || "Jeu de stratégie"}</span>
                 </div>
               ))}
             </div>
@@ -1323,39 +1327,9 @@ function ProfilePage({ user = null, favorites = [], history = [], onSelectGame }
           )}
         </div>
       )}
-
-      {activeTab === "history" && (
-        <div>
-          {Array.isArray(history) && history.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {history.map((game, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => onSelectGame && onSelectGame(game)}
-                  style={{
-                    padding: "12px 16px",
-                    background: "#ffffff",
-                    borderRadius: "6px",
-                    border: "1px solid #eef2f5",
-                    cursor: "pointer",
-                    display: "flex",
-                    justifyContent: "space-between"
-                  }}
-                >
-                  <span style={{ fontWeight: "600", color: "#1a2b3c" }}>{game?.name || "Jeu"}</span>
-                  <span style={{ color: "#a0acb8", fontSize: "12px" }}>Consulté récemment</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p style={{ color: "#7a8a99", fontStyle: "italic" }}>Aucun historique récent.</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
-
 
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 // ─── Main App Shell ──────────────────────────────────────────────────────────
