@@ -831,6 +831,7 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 
   // Liste des ludèmes avec mots-clés de recherche associés
 // ─── Ludemes Page (Version Sécurisée) ─────────────────────────────────────────
+// ─── Ludemes Page (Association stricte et précise) ───────────────────────────
 
 const LUDEMES_DATABASE = [
   {
@@ -838,56 +839,64 @@ const LUDEMES_DATABASE = [
     name: "Alignment (Alignement)",
     desc: "Jeux reposant sur la formation d'une ligne continue de pièces (horizontale, verticale ou diagonale).",
     history: "Attesté dès l'Antiquité (Égypte, Grèce antique, Empire romain).",
-    keywords: ["alignment", "alignement", "row", "line", "morris", "tictactoe", "alquerque", "gomoku", "morpion"]
+    explicitKeys: ["alignment", "alignement", "morpion", "tic-tac-toe", "gomoku", "connect 4"],
+    strictNames: ["alquerque", "moulin", "nine men's morris", "gomoku", "connect 4"]
   },
   {
     id: "race",
     name: "Race (Course)",
     desc: "Jeux où les joueurs déplacent leurs pièces le long d'un parcours pour atteindre la fin avant l'adversaire.",
     history: "Une des plus anciennes familles connues (Senet, Jeu Royal d'Ur ~2600 av. J.-C.).",
-    keywords: ["race", "parcheesi", "ludo", "senet", "backgammon", "track", "course", "pachisi", "ur", "chaupar"]
+    explicitKeys: ["race", "course", "pachisi", "parcheesi", "ludo", "backgammon", "senet", "jeu royal d'ur"],
+    strictNames: ["senet", "jeu royal d'ur", "backgammon", "pachisi", "chaupar", "ludo", "snakes and ladders"]
   },
   {
     id: "mancala",
     name: "Sowing / Mancala (Égrenage)",
     desc: "Jeux impliquant le comptage, le prélèvement et la redistribution cyclique de graines ou coquillages.",
     history: "Originaire d'Afrique et du Moyen-Orient, développé dès le premier millénaire.",
-    keywords: ["mancala", "sowing", "awale", "oware", "seeds", "egrenage", "semence", "bao", "toguz", "congkak"]
+    explicitKeys: ["mancala", "sowing", "egrenage", "semence"],
+    strictNames: ["awale", "awalé", "mancala", "toguz korgool", "bao", "congkak", "kalaha", "oware"]
   },
   {
     id: "capture",
     name: "Capture & Elimination (Prise)",
     desc: "Jeux centrés sur l'élimination ou la capture des pièces adverses par remplacement, saut ou encadrement.",
     history: "Clé de voûte des jeux de stratégie militaire mondiaux (Échecs, Dames, Xiangqi).",
-    keywords: ["capture", "elimination", "chess", "echecs", "dames", "fanorona", "draughts", "shogi", "xiangqi", "saut"]
+    explicitKeys: ["capture", "elimination", "chess", "echecs", "dames", "draughts"],
+    strictNames: ["echecs", "échecs", "dames", "xiangqi", "shogi", "fanorona", "surakarta", "yote", "yoté"]
   },
   {
     id: "hunt",
     name: "Hunt & Asymmetry (Chasse & Asymétrie)",
     desc: "Affrontement asymétrique où un camp (prédateur) cherche à capturer, et l'autre (proies) cherche à bloquer.",
     history: "Traductions culturelles très répandues dans les traditions nordiques (Tafl) et népalaises (Bagh-Chal).",
-    keywords: ["hunt", "chasse", "asymmetry", "asymetrie", "bagh", "chal", "tiger", "tafl", "hnefatafl", "renard"]
+    explicitKeys: ["hunt", "chasse", "asymmetry", "asymetrie", "tafl"],
+    strictNames: ["bagh chal", "bagh-chal", "hnefatafl", "tablut", "renard et oies"]
   },
   {
     id: "blocking",
     name: "Blocking & Trapping (Blocage & Immobilisation)",
     desc: "Jeux axés sur le verrouillage des mouvements de l'adversaire jusqu'à l'interdiction de tout coup légal.",
     history: "Présent dans de nombreux jeux traditionnels d'Afrique et d'Asie.",
-    keywords: ["blocking", "trap", "block", "trapping", "blocage", "impasses", "mu torere", "pong", "quoridor"]
+    explicitKeys: ["blocking", "trapping", "blocage", "immobilisation"],
+    strictNames: ["mu torere", "pong hau k'i", "quoridor"]
   },
   {
     id: "territory",
     name: "Territory (Territoire & Contrôle)",
     desc: "Jeux d'occupation spatiale visant à délimiter, encadrer ou contrôler des zones du plateau.",
     history: "Domaine emblématique d'Asie de l'Est (Go ~4000 ans d'histoire).",
-    keywords: ["territory", "go", "reversi", "othello", "occupy", "territoire", "domination", "amazons"]
+    explicitKeys: ["territory", "territoire", "space control"],
+    strictNames: ["go", "reversi", "othello", "amazons", "hex"]
   },
   {
     id: "connection",
     name: "Connection & Topology (Connexion & Réseau)",
-    desc: "Jeux de relie de bords ou de points opposés par une chaîne continue de pièces.",
+    desc: "Jeux de reliure de bords ou de points opposés par une chaîne continue de pièces.",
     history: "Famille théorique moderne et mathématique (développée au XXe siècle).",
-    keywords: ["connection", "connexion", "network", "hex", "twixt", "havannah", "reseau", "chaine"]
+    explicitKeys: ["connection", "connexion", "network", "topology"],
+    strictNames: ["hex", "twixt", "havannah"]
   }
 ];
 
@@ -897,30 +906,30 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
     else if (onOpen) onOpen(game);
   };
 
-  // Filtrage sécurisé (évite les erreurs si un champ du jeu est nul)
   const getMatchingGames = (ludeme) => {
     if (!Array.isArray(games)) return [];
 
     return games.filter((game) => {
-      if (!game) return false;
+      if (!game || !game.name) return false;
 
-      const textToSearch = [
-        game.category,
-        game.family,
-        game.ludeme,
-        game.ludemeSummary,
-        Array.isArray(game.ludemes) ? game.ludemes.join(" ") : "",
-        Array.isArray(game.categories) ? game.categories.join(" ") : "",
-        game.type,
-        game.description,
-        game.rules,
-        game.name
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+      const gameNameClean = game.name.toLowerCase().trim();
 
-      return ludeme.keywords.some((keyword) => textToSearch.includes(keyword.toLowerCase()));
+      // 1. Vérification directe par le nom strict du jeu
+      if (ludeme.strictNames.some((strict) => gameNameClean.includes(strict))) {
+        return true;
+      }
+
+      // 2. Vérification ciblé dans les métadonnées spécifiques du jeu
+      const ludemeField = (game.ludeme || "").toLowerCase();
+      const categoryField = (game.category || "").toLowerCase();
+      const familyField = (game.family || "").toLowerCase();
+
+      return ludeme.explicitKeys.some(
+        (key) =>
+          ludemeField.includes(key) ||
+          categoryField.includes(key) ||
+          familyField.includes(key)
+      );
     });
   };
 
@@ -1001,7 +1010,7 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
                           boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                         }}
                       >
-                        {game.name || "Jeu sans nom"}
+                        {game.name}
                       </button>
                     ))
                   ) : (
