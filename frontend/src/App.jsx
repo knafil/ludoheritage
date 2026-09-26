@@ -476,15 +476,24 @@ const CITY_COORDINATES = {
   italie: [41.8719, 12.5674],
 };
 
-function WorldMap({ games = [], onSelectGame, onOpen }) {
-  const handleGameClick = (game) => {
-    // Exécute la fonction de sélection reçue depuis App.jsx
-    if (onSelectGame) {
-      onSelectGame(game);
-    } else if (onOpen) {
-      onOpen(game);
-    }
-  };
+function WorldMap({ games = [], onSelectGame, onOpen, selectedRegion, onFilterRegion }) {
+return (
+    <div>
+      {/* Exemple d'interface de filtre par région */}
+      <select value={selectedRegion} onChange={(e) => onFilterRegion(e.target.value)}>
+        <option value="All">Toutes les régions</option>
+        <option value="Europe">Europe</option>
+        <option value="Asie">Asie</option>
+        <option value="Afrique">Afrique</option>
+        {/* Autres régions... */}
+      </select>
+const handleGameClick = (game) => {
+  if (onOpen) {
+    onOpen(game);
+  } else if (onSelectGame) {
+    onSelectGame(game);
+  }
+};
 
 // On garde une trace des coordonnées déjà utilisées pour décaler légèrement
 const getCoordinates = (game, index) => {
@@ -558,6 +567,8 @@ const getCoordinates = (game, index) => {
       </div>
     </section>
   );
+</div>
+);
 }
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
