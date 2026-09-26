@@ -479,8 +479,12 @@ const CITY_COORDINATES = {
 
 function WorldMap({ games = [], onSelectGame, onOpen }) {
   const handleGameClick = (game) => {
-    if (onSelectGame) onSelectGame(game);
-    else if (onOpen) onOpen(game);
+    // Exécute la fonction de sélection reçue depuis App.jsx
+    if (onSelectGame) {
+      onSelectGame(game);
+    } else if (onOpen) {
+      onOpen(game);
+    }
   };
 
   const getCoordinates = (game) => {
@@ -504,7 +508,7 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
   };
 
   return (
-    <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto" }}>
+    <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
       <div style={{ height: "580px", borderRadius: "8px", overflow: "hidden", border: "1px solid #1a2b3c" }}>
         <MapContainer
           center={[25, 20]}
@@ -513,13 +517,13 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
           maxZoom={8}
           style={{ width: "100%", height: "100%", backgroundColor: "#071624" }}
         >
+          <TileLayer
+            attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+            maxZoom={16}
+          />
 
-        <TileLayer
-  attribution='&copy; <a href="https://www.esri.com/">Esri</a>, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-  url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-  maxZoom={16}
-/> 
-         {games.map((game) => {
+          {games.map((game) => {
             const coords = getCoordinates(game);
             const color = getRegionColor(game.region, game.country);
 
@@ -529,7 +533,7 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
                 position={coords}
                 icon={createCustomIcon(color)}
                 eventHandlers={{
-                  click: () => handleGameClick(game),
+                  click: () => handleGameClick(game), // Clic direct sur la puce
                 }}
               >
                 <Popup className="custom-popup">
@@ -541,15 +545,21 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
                       {game.country ? `${game.country} (${game.region})` : game.region}
                     </p>
                     <button
-                      onClick={() => handleGameClick(game)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Empêche Leaflet de bloquer l'événement
+                        handleGameClick(game);
+                      }}
                       style={{
                         backgroundColor: color,
                         color: "#fff",
                         border: "none",
-                        padding: "4px 8px",
+                        padding: "6px 12px",
                         borderRadius: "4px",
                         fontSize: "11px",
+                        fontWeight: "bold",
                         cursor: "pointer",
+                        width: "100%",
                       }}
                     >
                       Voir le jeu
@@ -564,7 +574,6 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
-
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
