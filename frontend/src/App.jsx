@@ -830,8 +830,10 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
 // ─── Main App Shell ──────────────────────────────────────────────────────────
 
   // Liste des ludèmes avec mots-clés de recherche associés
-  const ludemesList = [
-{
+// ─── Ludemes Page (Version Sécurisée) ─────────────────────────────────────────
+
+const LUDEMES_DATABASE = [
+  {
     id: "alignment",
     name: "Alignment (Alignement)",
     desc: "Jeux reposant sur la formation d'une ligne continue de pièces (horizontale, verticale ou diagonale).",
@@ -887,28 +889,28 @@ function QuizPage({ user, games, leaderboard, onScoreSubmit }) {
     history: "Famille théorique moderne et mathématique (développée au XXe siècle).",
     keywords: ["connection", "connexion", "network", "hex", "twixt", "havannah", "reseau", "chaine"]
   }
+];
 
-  ];
-
-  // Filtre les jeux correspondant à un ludème spécifique
 function LudemesPage({ games = [], onSelectGame, onOpen }) {
-  const { t } = useTranslation();
-
   const handleOpenGame = (game) => {
     if (onSelectGame) onSelectGame(game);
     else if (onOpen) onOpen(game);
   };
 
-  // Filtrage intelligent des jeux selon les mots-clés du ludème
+  // Filtrage sécurisé (évite les erreurs si un champ du jeu est nul)
   const getMatchingGames = (ludeme) => {
+    if (!Array.isArray(games)) return [];
+
     return games.filter((game) => {
+      if (!game) return false;
+
       const textToSearch = [
         game.category,
         game.family,
         game.ludeme,
         game.ludemeSummary,
-        ...(game.ludemes || []),
-        ...(game.categories || []),
+        Array.isArray(game.ludemes) ? game.ludemes.join(" ") : "",
+        Array.isArray(game.categories) ? game.categories.join(" ") : "",
         game.type,
         game.description,
         game.rules,
@@ -979,9 +981,9 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   {matchingGames.length > 0 ? (
-                    matchingGames.map((game) => (
+                    matchingGames.map((game, idx) => (
                       <button
-                        key={game.id || game.name}
+                        key={game.id || game.name || idx}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenGame(game);
@@ -998,16 +1000,8 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
                           transition: "all 0.15s ease",
                           boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#eadaa8";
-                          e.currentTarget.style.transform = "translateY(-1px)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "#f5f0e6";
-                          e.currentTarget.style.transform = "translateY(0)";
-                        }}
                       >
-                        {game.name}
+                        {game.name || "Jeu sans nom"}
                       </button>
                     ))
                   ) : (
@@ -1024,7 +1018,7 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
-//CommunityPage
+//---------CommunityPage--------------------------------------
 
 function CommunityPage({ user, games }) {
   const { t } = useTranslation();
