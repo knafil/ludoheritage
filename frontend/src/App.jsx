@@ -838,47 +838,87 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
 
   // Liste des ludèmes avec mots-clés de recherche associés
   const ludemesList = [
-    {
-      id: "alignment",
-      name: "Alignment",
-      desc: "Games based on aligning pieces in a row",
-      keywords: ["alignment", "alignement", "row", "line", "morris", "tictactoe", "alquerque"]
-    },
-    {
-      id: "race",
-      name: "Race",
-      desc: "Games where players race pieces along a track",
-      keywords: ["race", "parcheesi", "ludo", "senet", "backgammon", "track", "course"]
-    },
-    {
-      id: "mancala",
-      name: "Sowing / Mancala",
-      desc: "Games involving counting and distributing seeds",
-      keywords: ["mancala", "sowing", "awale", "oware", "seeds", "egrenage", "semence"]
-    },
-    {
-      id: "blocking",
-      name: "Blocking",
-      desc: "Games focused on trapping or blocking opponent movement",
-      keywords: ["blocking", "trap", "block", "trapping", "blocage", "impasses"]
-    },
-    {
-      id: "territory",
-      name: "Territory",
-      desc: "Games about occupying and controlling space",
-      keywords: ["territory", "go", "reversi", "othello", "occupy", "territoire", "domination"]
-    }
+{
+    id: "alignment",
+    name: "Alignment (Alignement)",
+    desc: "Jeux reposant sur la formation d'une ligne continue de pièces (horizontale, verticale ou diagonale).",
+    history: "Attesté dès l'Antiquité (Égypte, Grèce antique, Empire romain).",
+    keywords: ["alignment", "alignement", "row", "line", "morris", "tictactoe", "alquerque", "gomoku", "morpion"]
+  },
+  {
+    id: "race",
+    name: "Race (Course)",
+    desc: "Jeux où les joueurs déplacent leurs pièces le long d'un parcours pour atteindre la fin avant l'adversaire.",
+    history: "Une des plus anciennes familles connues (Senet, Jeu Royal d'Ur ~2600 av. J.-C.).",
+    keywords: ["race", "parcheesi", "ludo", "senet", "backgammon", "track", "course", "pachisi", "ur", "chaupar"]
+  },
+  {
+    id: "mancala",
+    name: "Sowing / Mancala (Égrenage)",
+    desc: "Jeux impliquant le comptage, le prélèvement et la redistribution cyclique de graines ou coquillages.",
+    history: "Originaire d'Afrique et du Moyen-Orient, développé dès le premier millénaire.",
+    keywords: ["mancala", "sowing", "awale", "oware", "seeds", "egrenage", "semence", "bao", "toguz", "congkak"]
+  },
+  {
+    id: "capture",
+    name: "Capture & Elimination (Prise)",
+    desc: "Jeux centrés sur l'élimination ou la capture des pièces adverses par remplacement, saut ou encadrement.",
+    history: "Clé de voûte des jeux de stratégie militaire mondiaux (Échecs, Dames, Xiangqi).",
+    keywords: ["capture", "elimination", "chess", "echecs", "dames", "fanorona", "draughts", "shogi", "xiangqi", "saut"]
+  },
+  {
+    id: "hunt",
+    name: "Hunt & Asymmetry (Chasse & Asymétrie)",
+    desc: "Affrontement asymétrique où un camp (prédateur) cherche à capturer, et l'autre (proies) cherche à bloquer.",
+    history: "Traductions culturelles très répandues dans les traditions nordiques (Tafl) et népalaises (Bagh-Chal).",
+    keywords: ["hunt", "chasse", "asymmetry", "asymetrie", "bagh", "chal", "tiger", "tafl", "hnefatafl", "renard"]
+  },
+  {
+    id: "blocking",
+    name: "Blocking & Trapping (Blocage & Immobilisation)",
+    desc: "Jeux axés sur le verrouillage des mouvements de l'adversaire jusqu'à l'interdiction de tout coup légal.",
+    history: "Présent dans de nombreux jeux traditionnels d'Afrique et d'Asie.",
+    keywords: ["blocking", "trap", "block", "trapping", "blocage", "impasses", "mu torere", "pong", "quoridor"]
+  },
+  {
+    id: "territory",
+    name: "Territory (Territoire & Contrôle)",
+    desc: "Jeux d'occupation spatiale visant à délimiter, encadrer ou contrôler des zones du plateau.",
+    history: "Domaine emblématique d'Asie de l'Est (Go ~4000 ans d'histoire).",
+    keywords: ["territory", "go", "reversi", "othello", "occupy", "territoire", "domination", "amazons"]
+  },
+  {
+    id: "connection",
+    name: "Connection & Topology (Connexion & Réseau)",
+    desc: "Jeux de relie de bords ou de points opposés par une chaîne continue de pièces.",
+    history: "Famille théorique moderne et mathématique (développée au XXe siècle).",
+    keywords: ["connection", "connexion", "network", "hex", "twixt", "havannah", "reseau", "chaine"]
+  }
+
   ];
 
   // Filtre les jeux correspondant à un ludème spécifique
+function LudemesPage({ games = [], onSelectGame, onOpen }) {
+  const { t } = useTranslation();
+
+  const handleOpenGame = (game) => {
+    if (onSelectGame) onSelectGame(game);
+    else if (onOpen) onOpen(game);
+  };
+
+  // Filtrage intelligent des jeux selon les mots-clés du ludème
   const getMatchingGames = (ludeme) => {
     return games.filter((game) => {
       const textToSearch = [
         game.category,
         game.family,
         game.ludeme,
+        game.ludemeSummary,
+        ...(game.ludemes || []),
+        ...(game.categories || []),
         game.type,
         game.description,
+        game.rules,
         game.name
       ]
         .filter(Boolean)
@@ -891,13 +931,13 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
 
   return (
     <section style={{ padding: "20px 0", maxWidth: "1100px", margin: "0 auto" }}>
-      <h2 style={{ fontSize: "26px", color: "#1a2b3c", marginBottom: "6px" }}>Ludemes</h2>
+      <h2 style={{ fontSize: "26px", color: "#1a2b3c", marginBottom: "6px" }}>Ludemes & Archétypes</h2>
       <p style={{ color: "#7a8a99", marginBottom: "28px", fontSize: "14px" }}>
-        Explore games grouped by their core conceptual building blocks (ludemes).
+        Explorez les jeux selon leurs briques conceptuelles et mécaniques fondamentales (ludèmes).
       </p>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-        {ludemesList.map((ludeme) => {
+        {LUDEMES_DATABASE.map((ludeme) => {
           const matchingGames = getMatchingGames(ludeme);
 
           return (
@@ -915,29 +955,33 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
               }}
             >
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                  <h3 style={{ margin: 0, fontSize: "19px", color: "#1a2b3c", fontWeight: "bold" }}>{ludeme.name}</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
+                  <h3 style={{ margin: 0, fontSize: "18px", color: "#1a2b3c", fontWeight: "bold" }}>{ludeme.name}</h3>
                   <span
                     style={{
-                      background: "#f0f4f8",
-                      color: "#2c4d6f",
+                      background: matchingGames.length > 0 ? "#f0f4f8" : "#fff1f0",
+                      color: matchingGames.length > 0 ? "#2c4d6f" : "#d9363e",
                       fontSize: "12px",
                       fontWeight: "700",
                       padding: "4px 10px",
-                      borderRadius: "12px"
+                      borderRadius: "12px",
+                      whiteSpace: "nowrap"
                     }}
                   >
-                    {matchingGames.length} jeux
+                    {matchingGames.length} jeu{matchingGames.length > 1 ? "x" : ""}
                   </span>
                 </div>
-                <p style={{ color: "#6a7a89", fontSize: "13px", lineHeight: "1.5", marginBottom: "18px" }}>
+                <p style={{ color: "#4a5a69", fontSize: "13px", lineHeight: "1.5", marginBottom: "8px" }}>
                   {ludeme.desc}
+                </p>
+                <p style={{ color: "#8a9aA9", fontSize: "11px", fontStyle: "italic", marginBottom: "16px" }}>
+                  🏛️ {ludeme.history}
                 </p>
               </div>
 
               <div style={{ borderTop: "1px solid #f0f4f8", paddingTop: "14px", marginTop: "10px" }}>
                 <div style={{ fontSize: "11px", fontWeight: "bold", color: "#8a9aA9", marginBottom: "10px", letterSpacing: "0.5px" }}>
-                  EXEMPLES :
+                  JEUX ASSOCIÉS :
                 </div>
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -975,7 +1019,7 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
                     ))
                   ) : (
                     <span style={{ fontSize: "12px", color: "#a0acb8", fontStyle: "italic" }}>
-                      Aucun jeu trouvé pour ce ludème
+                      Aucun jeu du catalogue actuel
                     </span>
                   )}
                 </div>
@@ -987,8 +1031,7 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
     </section>
   );
 }
-
-
+//CommunityPage
 
 function CommunityPage({ user, games }) {
   const { t } = useTranslation();
