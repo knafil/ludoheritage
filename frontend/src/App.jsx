@@ -430,6 +430,7 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
+// ─── World Map ────────────────────────────────────────────────────────────────
 // Création d'icônes personnalisées sous forme de puces colorées
 const createCustomIcon = (color = "#4ba3e3") => {
   return L.divIcon({
@@ -477,45 +478,34 @@ const CITY_COORDINATES = {
 };
 
 function WorldMap({ games = [], onSelectGame, onOpen, selectedRegion, onFilterRegion }) {
-return (
-    <div>
-      {/* Exemple d'interface de filtre par région */}
-      <select value={selectedRegion} onChange={(e) => onFilterRegion(e.target.value)}>
-        <option value="All">Toutes les régions</option>
-        <option value="Europe">Europe</option>
-        <option value="Asie">Asie</option>
-        <option value="Afrique">Afrique</option>
-        {/* Autres régions... */}
-      </select>
-const handleGameClick = (game) => {
-  if (onOpen) {
-    onOpen(game);
-  } else if (onSelectGame) {
-    onSelectGame(game);
-  }
-};
-
-// On garde une trace des coordonnées déjà utilisées pour décaler légèrement
-const getCoordinates = (game, index) => {
-  if (game.lat && game.lng) return [game.lat, game.lng];
-
-  const text = `${game.region || ""} ${game.country || ""}`.toLowerCase();
-  let baseCoords = [20, 0];
-
-  for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
-    if (text.includes(key)) {
-      baseCoords = coords;
-      break;
+  const handleGameClick = (game) => {
+    if (onOpen) {
+      onOpen(game);
+    } else if (onSelectGame) {
+      onSelectGame(game);
     }
-  }
+  };
 
-  // Petit décalage artificiel basatif sur l'index pour éviter la superposition exacte
-  const offsetLat = (index % 3 - 1) * 0.8; 
-  const offsetLng = (Math.floor(index / 3) % 3 - 1) * 0.8;
+  // On garde une trace des coordonnées déjà utilisées pour décaler légèrement
+  const getCoordinates = (game, index) => {
+    if (game.lat && game.lng) return [game.lat, game.lng];
 
-  return [baseCoords[0] + offsetLat, baseCoords[1] + offsetLng];
-};
+    const text = `${game.region || ""} ${game.country || ""}`.toLowerCase();
+    let baseCoords = [20, 0];
 
+    for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
+      if (text.includes(key)) {
+        baseCoords = coords;
+        break;
+      }
+    }
+
+    // Petit décalage artificiel basé sur l'index pour éviter la superposition exacte
+    const offsetLat = (index % 3 - 1) * 0.8; 
+    const offsetLng = (Math.floor(index / 3) % 3 - 1) * 0.8;
+
+    return [baseCoords[0] + offsetLat, baseCoords[1] + offsetLng];
+  };
 
   const getRegionColor = (regionStr = "", countryStr = "") => {
     const text = `${regionStr} ${countryStr}`.toLowerCase();
@@ -528,6 +518,17 @@ const getCoordinates = (game, index) => {
 
   return (
     <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+      {/* Interface de filtre par région */}
+      <div style={{ marginBottom: "10px" }}>
+        <select value={selectedRegion || "All"} onChange={(e) => onFilterRegion(e.target.value)}>
+          <option value="All">Toutes les régions</option>
+          <option value="Europe">Europe</option>
+          <option value="Asia">Asie</option>
+          <option value="Africa">Afrique</option>
+          <option value="America">Amérique</option>
+        </select>
+      </div>
+
       <div style={{ height: "580px", borderRadius: "8px", overflow: "hidden", border: "1px solid #1a2b3c" }}>
         <MapContainer
           center={[25, 20]}
@@ -541,35 +542,34 @@ const getCoordinates = (game, index) => {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
             maxZoom={16}
           />
-{games.map((game, index) => {
-  const coords = getCoordinates(game, index);
-  const color = getRegionColor(game.region, game.country);
+          {games.map((game, index) => {
+            const coords = getCoordinates(game, index);
+            const color = getRegionColor(game.region, game.country);
 
-  return (
-    <Marker
-      key={game.id || game.name}
-      position={coords}
-      icon={createCustomIcon(color)}
-      eventHandlers={{
-        click: () => handleGameClick(game), // Un clic ouvre directement la fiche du jeu
-      }}
-    >
-      {/* S'affiche immédiatement au survol de la souris */}
-      <Tooltip direction="top" offset={[0, -10]} opacity={0.9}>
-        <div style={{ fontWeight: "bold", fontSize: "12px", color: "#1a2b3c" }}>
-          {game.name}
-        </div>
-      </Tooltip>
-    </Marker>
-  );
-})}
+            return (
+              <Marker
+                key={game.id || game.name}
+                position={coords}
+                icon={createCustomIcon(color)}
+                eventHandlers={{
+                  click: () => handleGameClick(game),
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -10]} opacity={0.9}>
+                  <div style={{ fontWeight: "bold", fontSize: "12px", color: "#1a2b3c" }}>
+                    {game.name}
+                  </div>
+                </Tooltip>
+              </Marker>
+            );
+          })}
         </MapContainer>
       </div>
     </section>
   );
-</div>
-);
 }
+
+
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
 function Timeline({ games, onOpen }) {
