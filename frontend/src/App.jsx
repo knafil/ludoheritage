@@ -1206,13 +1206,24 @@ function CommunityPage({ user, games }) {
     </section>
   );
 }
+
 //-----------Profile Page---------------------------
+
 function ProfilePage({ user, games = [], favs = [], onOpen }) {
   const [activeTab, setActiveTab] = useState("favorites");
 
   // Récupération correcte selon la structure de ton objet user (displayName)
-  const profileName = user?.displayName || user?.name || user?.username || "Joueur";
-  const profileEmail = user?.email || "Email non renseigné";
+  const profileName = 
+    user?.displayName || 
+    user?.username || 
+    user?.name || 
+    user?.full_name || 
+    (user?.email ? user.email.split("@")[0] : "Joueur");  
+  const profileEmail = 
+    user?.email || 
+    user?.user_email || 
+    user?.mail || 
+    "Email non renseigné";
   const userAvatar = profileName.charAt(0).toUpperCase();
 
   // Filtrage des jeux favoris à partir du tableau d'IDs ou d'objets `favs`
