@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import './styles.css';
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from "react-leaflet";
 // Correction des icônes Leaflet par défaut
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -522,53 +521,28 @@ function WorldMap({ games = [], onSelectGame, onOpen }) {
             url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
             maxZoom={16}
           />
+{games.map((game) => {
+  const coords = getCoordinates(game);
+  const color = getRegionColor(game.region, game.country);
 
-          {games.map((game) => {
-            const coords = getCoordinates(game);
-            const color = getRegionColor(game.region, game.country);
-
-            return (
-              <Marker
-                key={game.id || game.name}
-                position={coords}
-                icon={createCustomIcon(color)}
-                eventHandlers={{
-                  click: () => handleGameClick(game), // Clic direct sur la puce
-                }}
-              >
-                <Popup className="custom-popup">
-                  <div style={{ textAlign: "left" }}>
-                    <h4 style={{ margin: "0 0 4px 0", color: "#1a2b3c", fontSize: "14px" }}>
-                      {game.name}
-                    </h4>
-                    <p style={{ margin: "0 0 6px 0", color: "#666", fontSize: "11px" }}>
-                      {game.country ? `${game.country} (${game.region})` : game.region}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Empêche Leaflet de bloquer l'événement
-                        handleGameClick(game);
-                      }}
-                      style={{
-                        backgroundColor: color,
-                        color: "#fff",
-                        border: "none",
-                        padding: "6px 12px",
-                        borderRadius: "4px",
-                        fontSize: "11px",
-                        fontWeight: "bold",
-                        cursor: "pointer",
-                        width: "100%",
-                      }}
-                    >
-                      Voir le jeu
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
+  return (
+    <Marker
+      key={game.id || game.name}
+      position={coords}
+      icon={createCustomIcon(color)}
+      eventHandlers={{
+        click: () => handleGameClick(game), // Un clic ouvre directement la fiche du jeu
+      }}
+    >
+      {/* S'affiche immédiatement au survol de la souris */}
+      <Tooltip direction="top" offset={[0, -10]} opacity={0.9}>
+        <div style={{ fontWeight: "bold", fontSize: "12px", color: "#1a2b3c" }}>
+          {game.name}
+        </div>
+      </Tooltip>
+    </Marker>
+  );
+})}
         </MapContainer>
       </div>
     </section>
