@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import './styles.css';
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Correction des icônes Leaflet par défaut
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
+});
 const rawApiBase = import.meta.env.VITE_API_URL || "http://localhost:8080";
 // Supprime le slash final s'il existe
 const API_BASE = rawApiBase.endsWith('/') ? rawApiBase.slice(0, -1) : rawApiBase;
@@ -416,216 +431,133 @@ function GameModal({ game, onClose, isFav, onToggleFav }) {
 }
 
 // ─── World Map ────────────────────────────────────────────────────────────────
+// Création d'icônes personnalisées sous forme de puces colorées
+const createCustomIcon = (color = "#4ba3e3") => {
+  return L.divIcon({
+    className: "custom-map-marker",
+    html: `
+      <div style="
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid ${color};
+        background-color: rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 10px ${color};
+      ">
+        <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #fff;"></div>
+      </div>
+    `,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+};
+
+// Coordonnées par défaut (Lat, Lng) si le JSON n'a pas encore de lat/lng
+const CITY_COORDINATES = {
+  japon: [36.2048, 138.2529],
+  coree: [35.9078, 127.7669],
+  chine: [35.8617, 104.1954],
+  nepal: [28.3949, 84.124],
+  inde: [20.5937, 78.9629],
+  "sri lanka": [7.8731, 80.7718],
+  madagascar: [-18.8792, 47.5079],
+  "afrique de l'ouest": [9.082, 8.6753],
+  "afrique de l'est": [1.3733, 32.2903],
+  egypte: [26.8206, 30.8025],
+  scandinavie: [60.1282, 18.6435],
+  france: [46.2276, 2.2137],
+  espagne: [40.4637, -3.7492],
+  "al-andalus": [37.3891, -5.9845],
+  irak: [33.2232, 43.6793],
+  iran: [32.4279, 53.688],
+  grece: [39.0742, 21.8243],
+  italie: [41.8719, 12.5674],
+};
 
 function WorldMap({ games = [], onSelectGame, onOpen }) {
-  const { t } = useTranslation();
-  const [hoveredGame, setHoveredGame] = useState(null);
-
   const handleGameClick = (game) => {
     if (onSelectGame) onSelectGame(game);
     else if (onOpen) onOpen(game);
   };
 
-  // Fonction pour supprimer les accents et mettre en minuscules
-  const normalizeStr = (str = "") =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+  const getCoordinates = (game) => {
+    if (game.lat && game.lng) return [game.lat, game.lng];
 
-  // Coordonnées ajustées spécifiquement à la projection du SVG Wikimedia
-  const getBaseCoordinates = (game) => {
-    const region = normalizeStr(game.region);
-    const country = normalizeStr(game.country);
-    const text = `${region} ${country}`;
+    const text = `${game.region || ""} ${game.country || ""}`.toLowerCase();
+    for (const [key, coords] of Object.entries(CITY_COORDINATES)) {
+      if (text.includes(key)) return coords;
+    }
 
-    // 1. Pays & Lieux très spécifiques
-    if (text.includes("japan") || text.includes("japon")) return { x: 87, y: 35 };
-    if (text.includes("korea") || text.includes("coree")) return { x: 82, y: 36 };
-    if (text.includes("china") || text.includes("chine")) return { x: 78, y: 38 };
-    if (text.includes("nepal")) return { x: 68, y: 38 }; // Bagh Chal
-    if (text.includes("india") || text.includes("inde") || text.includes("sri lanka")) return { x: 70, y: 46 }; // Carrom / Échecs (Décalé vers la droite, sur le continent indien)
-    if (text.includes("madagascar")) return { x: 62, y: 65 }; // Fanorona
-    if (text.includes("scandinavie") || text.includes("viking") || text.includes("scandinavia")) return { x: 50, y: 19 }; // Hnefatafl
-    if (text.includes("france")) return { x: 48, y: 26 }; // Dames
-    if (text.includes("al-andalus") || text.includes("espagne") || text.includes("spain")) return { x: 45, y: 31 }; // Alquerque
-    // Ajustements Proche-Orient / Mésopotamie
-    if (text.includes("mesopotamie") || text.includes("irak") || text.includes("iraq")) return { x: 59, y: 39 }; // Jeu Royal d'Ur (remonté un peu plus bas, au sud de la Mer Noire)
-    if (text.includes("egypt") || text.includes("egypte")) return { x: 55, y: 40 }; // Égypte (descendu sur les terres égyptiennes)
-    if (text.includes("iran") || text.includes("perse")) return { x: 61, y: 35 }; // Backgammon
-    if (text.includes("greece") || text.includes("grece") || text.includes("italy") || text.includes("italie")) return { x: 51, y: 28 };
-
-    // 2. Régions Afrique
-    if (text.includes("ouest") && text.includes("afriq")) return { x: 47, y: 44 }; // Awalé (Décalé un peu vers l'est pour rentrer dans le continent)
-    if (text.includes("est") && text.includes("afriq")) return { x: 58, y: 50 }; // Mancala
-    if (text.includes("nord") && text.includes("afriq")) return { x: 48, y: 34 };
-    if (text.includes("sud") && text.includes("afriq")) return { x: 53, y: 68 };
-    if (text.includes("sub-saharan") || text.includes("subsaharienne")) return { x: 52, y: 52 };
-    if (text.includes("afrique") || text.includes("africa")) return { x: 52, y: 50 };
-
-    // 3. Autres Régions du monde
-    if (text.includes("moyen-orient") || text.includes("middle east") || text.includes("arab")) return { x: 57, y: 36 };
-    if (text.includes("asie de l'est") || text.includes("east asia")) return { x: 79, y: 38 };
-    if (text.includes("asie du sud") || text.includes("south asia")) return { x: 70, y: 44 };
-    if (text.includes("sud-est") || text.includes("southeast")) return { x: 75, y: 48 };
-    if (text.includes("asie") || text.includes("asia")) return { x: 72, y: 35 };
-
-    if (text.includes("europe")) return { x: 49, y: 22 };
-    if (text.includes("amerique du nord") || text.includes("north america")) return { x: 22, y: 32 };
-    if (text.includes("amerique du sud") || text.includes("south america")) return { x: 30, y: 65 };
-    if (text.includes("oceanie") || text.includes("oceania")) return { x: 86, y: 72 };
-
-    return { x: 50, y: 42 };
+    return [20, 0];
   };
-  // Dispersion resserrée
-  const processedGames = useMemo(() => {
-    const mapGroups = {};
-
-    games.forEach((game) => {
-      const coords = getBaseCoordinates(game);
-      const key = `${coords.x}_${coords.y}`;
-      if (!mapGroups[key]) mapGroups[key] = [];
-      mapGroups[key].push(game);
-    });
-
-    const result = [];
-    Object.values(mapGroups).forEach((group) => {
-      if (group.length === 1) {
-        const coords = getBaseCoordinates(group[0]);
-        result.push({ ...group[0], mapX: coords.x, mapY: coords.y });
-      } else {
-        const total = group.length;
-        group.forEach((game, index) => {
-          const coords = getBaseCoordinates(game);
-          const angle = (index / total) * 2 * Math.PI;
-          const radius = 1.5; // Rayon réduit à 1.5%
-          result.push({
-            ...game,
-            mapX: coords.x + Math.cos(angle) * radius,
-            mapY: coords.y + Math.sin(angle) * radius
-          });
-        });
-      }
-    });
-
-    return result;
-  }, [games]);
 
   const getRegionColor = (regionStr = "", countryStr = "") => {
-    const text = normalizeStr(regionStr + " " + countryStr);
-    if (text.includes("africa") || text.includes("afrique") || text.includes("arab") || text.includes("egypt") || text.includes("madagascar")) return "#e69c55"; // Orange
-    if (text.includes("europe") || text.includes("greece") || text.includes("rome") || text.includes("scandinavie")) return "#82b366"; // Vert
-    if (text.includes("america") || text.includes("amerique")) return "#9673a6"; // Violet
-    if (text.includes("asia") || text.includes("asie") || text.includes("japan") || text.includes("china") || text.includes("india") || text.includes("nepal")) return "#4ba3e3"; // Bleu Asie
-    return "#36b3a0"; // Turquoise
+    const text = `${regionStr} ${countryStr}`.toLowerCase();
+    if (text.includes("afrique") || text.includes("egypt") || text.includes("madagascar")) return "#e69c55";
+    if (text.includes("europe") || text.includes("scandinavie") || text.includes("france")) return "#82b366";
+    if (text.includes("amerique")) return "#9673a6";
+    if (text.includes("asie") || text.includes("japon") || text.includes("chine") || text.includes("inde") || text.includes("nepal")) return "#4ba3e3";
+    return "#36b3a0";
   };
 
   return (
     <section style={{ padding: "10px 0", maxWidth: "1200px", margin: "0 auto" }}>
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "580px",
-          backgroundColor: "#071624",
-          borderRadius: "8px",
-          overflow: "hidden",
-          border: "1px solid #1a2b3c",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url('https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            opacity: 0.25,
-            filter: "invert(40%) sepia(50%) saturate(1000%) hue-rotate(180deg)",
-            pointerEvents: "none"
-          }}
-        />
+      <div style={{ height: "580px", borderRadius: "8px", overflow: "hidden", border: "1px solid #1a2b3c" }}>
+        <MapContainer
+          center={[25, 20]}
+          zoom={2}
+          minZoom={2}
+          maxZoom={8}
+          style={{ width: "100%", height: "100%", backgroundColor: "#071624" }}
+        >
+        <TileLayer
+  attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+/>
+          {games.map((game) => {
+            const coords = getCoordinates(game);
+            const color = getRegionColor(game.region, game.country);
 
-        {processedGames.map((game) => {
-          const color = getRegionColor(game.region, game.country);
-          const isHovered = hoveredGame?.id === game.id || hoveredGame?.name === game.name;
-
-          return (
-            <div
-              key={game.id || game.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleGameClick(game);
-              }}
-              onMouseEnter={() => setHoveredGame(game)}
-              onMouseLeave={() => setHoveredGame(null)}
-              style={{
-                position: "absolute",
-                left: `${game.mapX}%`,
-                top: `${game.mapY}%`,
-                transform: "translate(-50%, -50%)",
-                cursor: "pointer",
-                padding: "8px",
-                zIndex: isHovered ? 100 : 20
-              }}
-            >
-              <div
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  border: `2px solid ${color}`,
-                  backgroundColor: "rgba(255, 255, 255, 0.25)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                  transform: isHovered ? "scale(1.4)" : "scale(1)",
-                  boxShadow: isHovered ? `0 0 14px ${color}` : "none"
+            return (
+              <Marker
+                key={game.id || game.name}
+                position={coords}
+                icon={createCustomIcon(color)}
+                eventHandlers={{
+                  click: () => handleGameClick(game),
                 }}
               >
-                <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#ffffff" }} />
-              </div>
-
-              {isHovered && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "32px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    backgroundColor: "#ffffff",
-                    borderRadius: "6px",
-                    padding: "12px 16px",
-                    boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
-                    width: "220px",
-                    pointerEvents: "none",
-                    zIndex: 200,
-                    textAlign: "left"
-                  }}
-                >
-                  <h4 style={{ margin: "0 0 2px 0", color: "#1a2b3c", fontSize: "15px", fontWeight: "bold" }}>
-                    {game.name}
-                  </h4>
-                  <p style={{ margin: "0 0 8px 0", color: "#7a8a99", fontSize: "11px" }}>
-                    {game.country ? `${game.country} (${game.region})` : game.region || "Traditionnel"}
-                  </p>
-
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                    <span style={{ backgroundColor: "#f0f4f8", color: "#4a5a6a", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
-                      {game.type || "Stratégie"}
-                    </span>
-                    <span style={{ backgroundColor: "#e6f2ed", color: "#2e7d5b", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
-                      {game.difficulty || "Facile"}
-                    </span>
+                <Popup className="custom-popup">
+                  <div style={{ textAlign: "left" }}>
+                    <h4 style={{ margin: "0 0 4px 0", color: "#1a2b3c", fontSize: "14px" }}>
+                      {game.name}
+                    </h4>
+                    <p style={{ margin: "0 0 6px 0", color: "#666", fontSize: "11px" }}>
+                      {game.country ? `${game.country} (${game.region})` : game.region}
+                    </p>
+                    <button
+                      onClick={() => handleGameClick(game)}
+                      style={{
+                        backgroundColor: color,
+                        color: "#fff",
+                        border: "none",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Voir le jeu
+                    </button>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
       </div>
     </section>
   );
