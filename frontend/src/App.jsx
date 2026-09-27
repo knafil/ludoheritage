@@ -1211,30 +1211,27 @@ function CommunityPage({ user, games }) {
 
 function ProfilePage({ user, games = [], favs = [], onOpen }) {
   console.log("DONNÉES USER :", user);
+
   const [activeTab, setActiveTab] = useState("favorites");
 
-  // Récupération correcte selon la structure de ton objet user (displayName)
-  const profileName = 
-    user?.displayName || 
-    user?.username || 
-    user?.name || 
-    user?.full_name || 
-    (user?.email ? user.email.split("@")[0] : "Joueur");  
-  const profileEmail = 
-    user?.email || 
-    user?.user_email || 
-    user?.mail || 
-    "Email non renseigné";
+  // Extraction sécurisée des informations (gère user.user ou user direct)
+  const userData = user?.user || user || {};
+
+  const profileName =
+    userData?.displayName ||
+    userData?.name ||
+    userData?.username ||
+    (userData?.email ? userData.email.split("@")[0] : "Joueur");
+
+  const profileEmail = userData?.email || "Email non renseigné";
   const userAvatar = profileName.charAt(0).toUpperCase();
 
-  // Filtrage des jeux favoris à partir du tableau d'IDs ou d'objets `favs`
+  // Filtrage des favoris
   const favoriteGames = games.filter((game) => {
     if (!favs) return false;
-    // Si favs contient des IDs
     if (typeof favs[0] === "number" || typeof favs[0] === "string") {
       return favs.includes(game.id) || favs.includes(game.name);
     }
-    // Si favs contient déjà des objets jeux
     return favs.some((f) => f.id === game.id || f.name === game.name);
   });
 
