@@ -1029,11 +1029,21 @@ function LudemesPage({ games = [], onSelectGame, onOpen }) {
 }
 //---------CommunityPage--------------------------------------
 
-function CommunityPage({ user, games }) {
+function CommunityPage({ user, games = [], onOpen }) {
   const { t } = useTranslation();
   const [selectedGame, setSelectedGame] = useState("");
   const [postText, setPostText] = useState("");
   const [commentInputs, setCommentInputs] = useState({});
+  const [openComments, setOpenComments] = useState({});
+
+  // Extraction sécurisée de l'utilisateur connecté
+  const userData = user?.user || user || {};
+  const currentAuthor =
+    userData?.displayName ||
+    userData?.name ||
+    userData?.username ||
+    (userData?.email ? userData.email.split("@")[0] : "Joueur");
+  const currentAvatar = currentAuthor.slice(0, 2).toUpperCase();
 
   const [posts, setPosts] = useState([
     {
@@ -1042,12 +1052,23 @@ function CommunityPage({ user, games }) {
       avatar: "ML",
       timeAgo: "409d",
       linkedGame: "Jeu Royal d'Ur",
-      content: "Irving Finkel du British Museum a joué au Jeu Royal d'Ur EN DIRECT sur YouTube contre un gamer moderne, avec un plateau vieux de 4000 ans — et il a GAGNÉ. Une vidéo incontournable.",
+      content:
+        "Irving Finkel du British Museum a joué au Jeu Royal d'Ur EN DIRECT sur YouTube contre un gamer moderne, avec un plateau vieux de 4000 ans — et il a GAGNÉ. Une vidéo incontournable.",
       likes: 7,
+      isLiked: false,
       comments: [
-        { author: "Youssef Idrissi", text: "He translated the rules from a 177 BC clay tablet and then beat a modern gamer. Absolutely incredible." },
-        { author: "Omar Chakroun", text: "Sans ce scribe babylonien qui a eu l'idée d'écrire les règles, ce jeu serait perdu à jamais." },
-        { author: "Amina Benali", text: "LudoHeritage existe justement pour qu'aucun jeu ne disparaisse. Belle mission !" }
+        {
+          author: "Youssef Idrissi",
+          text: "He translated the rules from a 177 BC clay tablet and then beat a modern gamer. Absolutely incredible."
+        },
+        {
+          author: "Omar Chakroun",
+          text: "Sans ce scribe babylonien qui a eu l'idée d'écrire les règles, ce jeu serait perdu à jamais."
+        },
+        {
+          author: "Amina Benali",
+          text: "LudoHeritage existe justement pour qu'aucun jeu ne disparaisse. Belle mission !"
+        }
       ]
     },
     {
@@ -1056,22 +1077,26 @@ function CommunityPage({ user, games }) {
       avatar: "FZ",
       timeAgo: "410d",
       linkedGame: "Bagh Chal",
-      content: "Quelqu'un a déjà tenté une variante de Bagh Chal à 5 tigres au lieu de 4 ? Est-ce que cela rééquilibre le jeu pour les chèvres ?",
+      content:
+        "Quelqu'un a déjà tenté une variante de Bagh Chal à 5 tigres au lieu de 4 ? Est-ce que cela rééquilibre le jeu pour les chèvres ?",
       likes: 3,
+      isLiked: false,
       comments: []
     }
   ]);
 
+  // Publier un nouveau message
   const handlePublish = () => {
     if (!postText.trim()) return;
     const newEntry = {
       id: Date.now(),
-      author: user?.displayName || "Utilisateur",
-      avatar: (user?.displayName || "U").slice(0, 2).toUpperCase(),
+      author: currentAuthor,
+      avatar: currentAvatar,
       timeAgo: "À l'instant",
       linkedGame: selectedGame,
       content: postText,
       likes: 0,
+      isLiked: false,
       comments: []
     };
     setPosts([newEntry, ...posts]);
@@ -1079,28 +1104,53 @@ function CommunityPage({ user, games }) {
     setSelectedGame("");
   };
 
+  // Basculer la mention J'aime
+  const handleToggleLike = (postId) => {
+    setPosts(
+      posts.map((p) => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            isLiked: !p.isLiked,
+            likes: p.isLiked ? p.likes - 1 : p.likes + 1
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  // Basculer la visibilité de la section commentaires
+  const toggleCommentsView = (postId) => {
+    setOpenComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  // Ajouter un commentaire
   const handleAddComment = (postId) => {
     const text = commentInputs[postId];
     if (!text || !text.trim()) return;
 
-    setPosts(posts.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          comments: [...p.comments, { author: user?.displayName || "Utilisateur", text }]
-        };
-      }
-      return p;
-    }));
+    setPosts(
+      posts.map((p) => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            comments: [...p.comments, { author: currentAuthor, text: text.trim() }]
+          };
+        }
+        return p;
+      })
+    );
 
     setCommentInputs({ ...commentInputs, [postId]: "" });
+    setOpenComments((prev) => ({ ...prev, [postId]: true }));
   };
 
   return (
     <section style={{ maxWidth: "800px", margin: "0 auto", padding: "20px 0" }}>
       {/* En-tête Forum */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "20px" }}>
-        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "700" }}>
+        <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "700", color: "#1a2b3c" }}>
           {t("communityForum", "Community forum")}
         </h1>
         <span style={{ color: "#8a99a8", fontSize: "14px" }}>
@@ -1109,104 +1159,263 @@ function CommunityPage({ user, games }) {
       </div>
 
       {/* Bloc de publication */}
-      <div className="card" style={{ background: "#ffffff", borderRadius: "8px", padding: "16px", marginBottom: "24px", border: "1px solid #eef2f5" }}>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <div style={{ width: "40px", height: "40px", background: "#0e6b85", color: "#fff", fontWeight: "bold", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", shrink: 0 }}>
-            {(user?.displayName || "C").slice(0, 1).toUpperCase()}
+      <div
+        className="card"
+        style={{
+          background: "#ffffff",
+          borderRadius: "12px",
+          padding: "20px",
+          marginBottom: "24px",
+          border: "1px solid #eef2f5",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+        }}
+      >
+        <div style={{ display: "flex", gap: "14px" }}>
+          <div
+            style={{
+              width: "44px",
+              height: "44px",
+              background: "#1a2b3c",
+              color: "#fff",
+              fontWeight: "bold",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              fontSize: "16px"
+            }}
+          >
+            {currentAvatar}
           </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
-            <select 
-              value={selectedGame} 
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "12px" }}>
+            <select
+              value={selectedGame}
               onChange={(e) => setSelectedGame(e.target.value)}
-              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", color: "#4b5563", background: "#fff" }}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                color: "#4b5563",
+                background: "#f8fafc",
+                fontSize: "14px"
+              }}
             >
               <option value="">{t("linkGameOptional", "Link a game (optional)")}</option>
-              {(games || []).map(g => (
-                <option key={g.id || g.name} value={g.name}>{g.name}</option>
+              {(games || []).map((g) => (
+                <option key={g.id || g.name} value={g.name}>
+                  {g.name}
+                </option>
               ))}
             </select>
 
-            <textarea 
+            <textarea
               rows={3}
               placeholder={t("sharePlaceholder", "Share a source, variant or question...")}
               value={postText}
               onChange={(e) => setPostText(e.target.value)}
-              style={{ width: "100%", padding: "10px", borderRadius: "6px", border: "1px solid #d1d5db", resize: "vertical", fontFamily: "inherit" }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "8px",
+                border: "1px solid #d1d5db",
+                resize: "vertical",
+                fontFamily: "inherit",
+                fontSize: "14px",
+                outline: "none",
+                boxSizing: "border-box"
+              }}
             />
 
-            <button 
-              className="primary"
-              onClick={handlePublish}
-              style={{ background: "#1b2a38", color: "#fff", padding: "10px 0", borderRadius: "4px", border: "none", fontWeight: "bold", cursor: "pointer" }}
-            >
-              {t("publish", "Publish")}
-            </button>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                className="primary"
+                onClick={handlePublish}
+                style={{
+                  background: "#1a2b3c",
+                  color: "#fff",
+                  padding: "8px 24px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  fontSize: "14px"
+                }}
+              >
+                {t("publish", "Publish")}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Fil des publications */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
         {posts.map((post) => (
-          <div key={post.id} className="card" style={{ background: "#ffffff", borderRadius: "8px", padding: "20px", border: "1px solid #eef2f5" }}>
+          <div
+            key={post.id}
+            className="card"
+            style={{
+              background: "#ffffff",
+              borderRadius: "12px",
+              padding: "20px",
+              border: "1px solid #eef2f5",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+            }}
+          >
             {/* Header du post */}
-            <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
-              <div style={{ width: "40px", height: "40px", background: "#0e6b85", color: "#fff", fontWeight: "bold", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "14px", alignItems: "center" }}>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  background: "#2c4d6f",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "15px"
+                }}
+              >
                 {post.avatar}
               </div>
               <div>
-                <div style={{ fontWeight: "bold", color: "#1a2b3c" }}>{post.author}</div>
-                <div style={{ fontSize: "12px", color: "#8a99a8" }}>
-                  {post.timeAgo} {post.linkedGame && `· ${post.linkedGame}`}
+                <div style={{ fontWeight: "bold", color: "#1a2b3c", fontSize: "15px" }}>{post.author}</div>
+                <div style={{ fontSize: "12px", color: "#8a99a8", display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                  <span>{post.timeAgo}</span>
+                  {post.linkedGame && (
+                    <>
+                      <span>•</span>
+                      <span
+                        onClick={() => {
+                          const target = games.find((g) => g.name === post.linkedGame);
+                          if (target && onOpen) onOpen(target);
+                        }}
+                        style={{
+                          background: "#f0f4f8",
+                          color: "#1a2b3c",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontWeight: "600",
+                          cursor: onOpen ? "pointer" : "default"
+                        }}
+                      >
+                        ♟️ {post.linkedGame}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Contenu */}
-            <p style={{ color: "#334155", lineHeight: "1.5", marginBottom: "16px" }}>
+            <p style={{ color: "#334155", lineHeight: "1.6", marginBottom: "16px", fontSize: "14px" }}>
               {post.content}
             </p>
 
             {/* Infoline (Likes et Nb commentaires) */}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#64748b", borderBottom: "1px solid #f1f5f9", paddingBottom: "12px", marginBottom: "12px" }}>
-              <span>Like ({post.likes})</span>
-              <span>{post.comments.length} comments</span>
-            </div>
-
-            {/* Liste des commentaires */}
-            {post.comments.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
-                {post.comments.map((c, i) => (
-                  <div key={i} style={{ fontSize: "13px", color: "#334155", lineHeight: "1.4" }}>
-                    <strong>{c.author}</strong> {c.text}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Champ pour commenter */}
-            <div style={{ display: "flex", gap: "8px" }}>
-              <input 
-                type="text" 
-                placeholder={t("addComment", "Add a comment")}
-                value={commentInputs[post.id] || ""}
-                onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                style={{ flex: 1, padding: "8px 12px", borderRadius: "4px", border: "1px solid #e2e8f0", fontSize: "13px" }}
-              />
-              <button 
-                onClick={() => handleAddComment(post.id)}
-                style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "0 16px", cursor: "pointer", fontSize: "13px", fontWeight: "bold" }}
+            <div
+              style={{
+                display: "flex",
+                gap: "16px",
+                fontSize: "13px",
+                color: "#64748b",
+                borderTop: "1px solid #f1f5f9",
+                paddingTop: "12px"
+              }}
+            >
+              <button
+                onClick={() => handleToggleLike(post.id)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: post.isLiked ? "#e11d48" : "#64748b",
+                  fontWeight: "600",
+                  fontSize: "13px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: 0
+                }}
               >
-                {t("send", "Send")}
+                {post.isLiked ? "❤️" : "🤍"} J'aime ({post.likes})
+              </button>
+
+              <button
+                onClick={() => toggleCommentsView(post.id)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  fontWeight: "600",
+                  fontSize: "13px",
+                  padding: 0
+                }}
+              >
+                💬 {post.comments.length} commentaire{post.comments.length > 1 ? "s" : ""}
               </button>
             </div>
+
+            {/* Liste et Saisie des Commentaires */}
+            {(openComments[post.id] || post.comments.length > 0) && (
+              <div style={{ marginTop: "14px", paddingTop: "12px", background: "#f8fafc", borderRadius: "8px", padding: "12px" }}>
+                {post.comments.length > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+                    {post.comments.map((c, i) => (
+                      <div key={i} style={{ fontSize: "13px", color: "#334155", lineHeight: "1.4" }}>
+                        <strong style={{ color: "#1a2b3c" }}>{c.author} : </strong>
+                        <span>{c.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Champ pour commenter */}
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <input
+                    type="text"
+                    placeholder={t("addComment", "Add a comment")}
+                    value={commentInputs[post.id] || ""}
+                    onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAddComment(post.id)}
+                    style={{
+                      background: "#1a2b3c",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "0 16px",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    {t("send", "Send")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
     </section>
   );
 }
-
 //-----------Profile Page---------------------------
 
 function ProfilePage({ user, games = [], favs = [], onOpen }) {
@@ -1519,7 +1728,7 @@ export default function App() {
         {tab === "Comparer" && <ComparePage games={games} onOpen={setSelectedGame} />}
         {tab === "Quiz" && <QuizPage user={user} games={games} leaderboard={leaderboard} onScoreSubmit={(sc, tot) => setLeaderboard([...leaderboard, { id: Date.now(), displayName: user.displayName, score: sc, total: tot }])} />}
         {tab === "Ludemes" && <LudemesPage games={games} onOpen={setSelectedGame} onSelectGame={setSelectedGame}/>}
-        {tab === "Communaute" && <CommunityPage user={user} />}
+        {tab === "Communaute" && <CommunityPage user={user} games={games} onOpen={setSelectedGame} />}
         {tab === "Profil" && <ProfilePage user={user} games={games} favs={favs} onOpen={setSelectedGame} />}
         
      </main>
