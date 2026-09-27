@@ -1210,6 +1210,7 @@ function CommunityPage({ user, games }) {
 //-----------Profile Page---------------------------
 
 function ProfilePage({ user, games = [], favs = [], onOpen }) {
+  console.log("DONNÉES USER :", user);
   const [activeTab, setActiveTab] = useState("favorites");
 
   // Récupération correcte selon la structure de ton objet user (displayName)
