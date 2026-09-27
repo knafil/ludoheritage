@@ -1045,45 +1045,64 @@ function CommunityPage({ user, games = [], onOpen }) {
     (userData?.email ? userData.email.split("@")[0] : "Joueur");
   const currentAvatar = currentAuthor.slice(0, 2).toUpperCase();
 
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      author: "Mehdi Lahlou",
-      avatar: "ML",
-      timeAgo: "409d",
-      linkedGame: "Jeu Royal d'Ur",
-      content:
-        "Irving Finkel du British Museum a joué au Jeu Royal d'Ur EN DIRECT sur YouTube contre un gamer moderne, avec un plateau vieux de 4000 ans — et il a GAGNÉ. Une vidéo incontournable.",
-      likes: 7,
-      isLiked: false,
-      comments: [
-        {
-          author: "Youssef Idrissi",
-          text: "He translated the rules from a 177 BC clay tablet and then beat a modern gamer. Absolutely incredible."
-        },
-        {
-          author: "Omar Chakroun",
-          text: "Sans ce scribe babylonien qui a eu l'idée d'écrire les règles, ce jeu serait perdu à jamais."
-        },
-        {
-          author: "Amina Benali",
-          text: "LudoHeritage existe justement pour qu'aucun jeu ne disparaisse. Belle mission !"
-        }
-      ]
-    },
-    {
-      id: 2,
-      author: "Fatima Zahra Alaoui",
-      avatar: "FZ",
-      timeAgo: "410d",
-      linkedGame: "Bagh Chal",
-      content:
-        "Quelqu'un a déjà tenté une variante de Bagh Chal à 5 tigres au lieu de 4 ? Est-ce que cela rééquilibre le jeu pour les chèvres ?",
-      likes: 3,
-      isLiked: false,
-      comments: []
+  // 1. Initialisation de l'état depuis le localStorage pour éviter la perte des données
+  const [posts, setPosts] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ludoheritage-posts");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Erreur de lecture du localStorage", e);
     }
-  ]);
+    // Publications par défaut lors de la toute première visite
+    return [
+      {
+        id: 1,
+        author: "Mehdi Lahlou",
+        avatar: "ML",
+        timeAgo: "409d",
+        linkedGame: "Jeu Royal d'Ur",
+        content:
+          "Irving Finkel du British Museum a joué au Jeu Royal d'Ur EN DIRECT sur YouTube contre un gamer moderne, avec un plateau vieux de 4000 ans — et il a GAGNÉ. Une vidéo incontournable.",
+        likes: 7,
+        isLiked: false,
+        comments: [
+          {
+            author: "Youssef Idrissi",
+            text: "He translated the rules from a 177 BC clay tablet and then beat a modern gamer. Absolutely incredible."
+          },
+          {
+            author: "Omar Chakroun",
+            text: "Sans ce scribe babylonien qui a eu l'idée d'écrire les règles, ce jeu serait perdu à jamais."
+          },
+          {
+            author: "Amina Benali",
+            text: "LudoHeritage existe justement pour qu'aucun jeu ne disparaisse. Belle mission !"
+          }
+        ]
+      },
+      {
+        id: 2,
+        author: "Fatima Zahra Alaoui",
+        avatar: "FZ",
+        timeAgo: "410d",
+        linkedGame: "Bagh Chal",
+        content:
+          "Quelqu'un a déjà tenté une variante de Bagh Chal à 5 tigres au lieu de 4 ? Est-ce que cela rééquilibre le jeu pour les chèvres ?",
+        likes: 3,
+        isLiked: false,
+        comments: []
+      }
+    ];
+  });
+
+  // 2. Sauvegarde automatique dans le localStorage à chaque changement de posts
+  useEffect(() => {
+    try {
+      localStorage.setItem("ludoheritage-posts", JSON.stringify(posts));
+    } catch (e) {
+      console.error("Erreur d'écriture dans le localStorage", e);
+    }
+  }, [posts]);
 
   // Publier un nouveau message
   const handlePublish = () => {
@@ -1120,7 +1139,7 @@ function CommunityPage({ user, games = [], onOpen }) {
     );
   };
 
-  // Basculer la visibilité de la section commentaires
+  // Afficher / masquer la section commentaires
   const toggleCommentsView = (postId) => {
     setOpenComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
@@ -1416,6 +1435,7 @@ function CommunityPage({ user, games = [], onOpen }) {
     </section>
   );
 }
+
 //-----------Profile Page---------------------------
 
 function ProfilePage({ user, games = [], favs = [], onOpen }) {
